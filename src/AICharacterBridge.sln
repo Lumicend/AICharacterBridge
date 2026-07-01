@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36623.8
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Core_AICharacterBridge", "Core_AICharacterBridge\Core_AICharacterBridge.shproj", "{24617CCC-6248-4159-B4B7-CC304F5E89BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK_AICharacterBridge", "KK_AICharacterBridge\KK_AICharacterBridge.csproj", "{834B1FC9-60EA-4C8B-9028-9D8989B046A2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{834B1FC9-60EA-4C8B-9028-9D8989B046A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{834B1FC9-60EA-4C8B-9028-9D8989B046A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{834B1FC9-60EA-4C8B-9028-9D8989B046A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{834B1FC9-60EA-4C8B-9028-9D8989B046A2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FDFF1C20-A8AF-42FB-8BD8-4B5087BC50F3}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Core_AICharacterBridge\Core_AICharacterBridge.projitems*{24617ccc-6248-4159-b4b7-cc304f5e89bd}*SharedItemsImports = 13
+		Core_AICharacterBridge\Core_AICharacterBridge.projitems*{834b1fc9-60ea-4c8b-9028-9d8989b046a2}*SharedItemsImports = 4
+	EndGlobalSection
+EndGlobal
