@@ -64,8 +64,8 @@
 
 動作テスト用として、以下のサンプルデータを用意しています。ダウンロードしておいてください。
 
-- [Sosuke_Kashiwagi.json](https://github.com/Lumicend/AICharacterBridge/blob/master/docs/SampleCards/%E6%9F%8F%E6%9C%A8%20%E5%A3%AE%E4%BA%AE.json)：プレイヤー用サンプルデータ
-- [Chika_Haruno.json](https://github.com/Lumicend/AICharacterBridge/blob/master/docs/SampleCards/%E6%98%A5%E9%87%8E%20%E5%8D%83%E4%BD%B3.json)：ヒロイン用サンプルデータ
+- [柏木 壮亮.json](https://github.com/Lumicend/AICharacterBridge/blob/master/docs/SampleCards/%E6%9F%8F%E6%9C%A8%20%E5%A3%AE%E4%BA%AE.json)：プレイヤー用サンプルデータ
+- [春野 千佳.json](https://github.com/Lumicend/AICharacterBridge/blob/master/docs/SampleCards/%E6%98%A5%E9%87%8E%20%E5%8D%83%E4%BD%B3.json)：ヒロイン用サンプルデータ
 
 > **補足：キャラクターカードとは**  
 > キャラクターの名前・性格・口調・背景などを記述したJSONファイルです。ゲーム内キャラクターとは独立して管理されるため、ゲーム内での名前や性格は影響しません。このテストでは、登録したヒロインに「Chika Haruno」としての性格をAIに割り当てます。
