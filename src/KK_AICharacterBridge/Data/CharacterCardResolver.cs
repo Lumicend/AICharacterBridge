@@ -135,9 +135,6 @@ namespace AICharacterBridge.Data
             clone.SetName(PromptReplacer.ReplaceAll(clone.GetName(), entries));
             clone.SetDescription(PromptReplacer.ReplaceAll(clone.GetDescription(), entries));
             clone.SetPersonality(PromptReplacer.ReplaceAll(clone.GetPersonality(), entries));
-            clone.SetMessageExample(PromptReplacer.ReplaceAll(clone.GetMessageExample(), entries));
-            clone.SetFirstMessage(PromptReplacer.ReplaceAll(clone.GetFirstMessage(), entries));
-            clone.SetScenario(PromptReplacer.ReplaceAll(clone.GetScenario(), entries));
 
             return clone;
         }
