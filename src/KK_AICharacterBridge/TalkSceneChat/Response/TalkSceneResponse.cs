@@ -44,162 +44,235 @@ namespace AICharacterBridge.TalkSceneChat.Response
         }
 
         /// <summary>
+        /// テキスト内の完全なトップレベルJSONオブジェクトの位置（開始位置と長さ）を表す内部構造体。
+        /// Represents the position (start index and length) of a complete top-level
+        /// JSON object found within a larger text.
+        /// </summary>
+        private struct JsonSpan
+        {
+            public readonly int Start;
+            public readonly int Length;
+
+            public JsonSpan(int start, int length)
+            {
+                Start = start;
+                Length = length;
+            }
+        }
+
+        /// <summary>
         /// JSON文字列からTalkSceneResponseオブジェクトをデシリアライズします。
         /// Deserializes a TalkSceneResponse object from a JSON string.
         /// </summary>
-        /// <param name="jsonString">JSON文字列</param>
-        /// <returns>デシリアライズされたTalkSceneResponseオブジェクト</returns>
+        /// <param name="jsonString">JSON文字列（AIからの生レスポンス）/ JSON string (raw response from the AI)</param>
+        /// <returns>デシリアライズされたTalkSceneResponseオブジェクト / Deserialized TalkSceneResponse object</returns>
         /// <exception cref="ArgumentException">JSON文字列がnullまたは空の場合</exception>
-        /// <exception cref="JsonException">JSON解析に失敗した場合</exception>
-        /// <exception cref="FormatException">必須フィールドが不足している場合</exception>
+        /// <exception cref="Exception">
+        /// JSONオブジェクトの候補が1つも見つからない場合、
+        /// またはすべての候補がデシリアライズ・検証に失敗した場合
+        /// </exception>
         public static TalkSceneResponse FromJson(string jsonString)
         {
             if (string.IsNullOrEmpty(jsonString))
                 throw new ArgumentException("JSON string cannot be null or empty.", nameof(jsonString));
 
-            // レスポンスクリーニング処理
-            string cleanedJson = CleanJsonResponse(jsonString);
+            // 応答内の完全なトップレベルJSONオブジェクト候補をすべて抽出する。
+            // Extract all candidate top-level JSON objects from the response.
+            List<JsonSpan> candidates = FindJsonObjectCandidates(jsonString);
 
-            try
+            if (candidates.Count == 0)
             {
-                var response = JsonConvert.DeserializeObject<TalkSceneResponse>(cleanedJson);
+                throw new Exception(
+                    "No JSON object structure ('{' ... '}') found in AI response.\n" +
+                    $"Raw response: {jsonString}");
+            }
 
-                if (response == null)
-                    throw new FormatException("Failed to deserialize TalkSceneResponse: result is null.");
+            // 末尾の候補から順に検証する。
+            // Validate candidates starting from the last one and moving backward.
+            Exception lastError = null;
 
-                // 必須フィールドの検証
-                if (response.ConversationSegments == null || response.ConversationSegments.Count == 0)
-                    throw new FormatException("'conversation_segments' is missing or empty in AI response.");
+            for (int i = candidates.Count - 1; i >= 0; i--)
+            {
+                JsonSpan span = candidates[i];
+                string candidateJson = jsonString.Substring(span.Start, span.Length);
 
-                if (string.IsNullOrEmpty(response.ImpressionOnUser))
-                    throw new FormatException("'impression_on_user' is missing or empty in AI response.");
-
-                if (string.IsNullOrEmpty(response.IsArousedByConversation))
-                    throw new FormatException("'is_aroused_by_conversation' is missing or empty in AI response.");
-
-                if (string.IsNullOrEmpty(response.PostConversationAction))
-                    throw new FormatException("'post_conversation_action' is missing or empty in AI response.");
-
-                // 各セグメントの Content から絵文字を除去する。
-                // Remove emoji from Content in each segment.
-                // バリデーションより前に実行することで、除去後の文字列に対して検証が行われる。
-                // Executed before validation so that the check runs against the sanitized string.
-                foreach (var segment in response.ConversationSegments)
+                try
                 {
-                    if (segment == null) continue;
-
-                    string original = segment.Content;
-                    segment.Content = RemoveEmoji(segment.Content);
-
-                    // 除去が発生した場合はデバッグログを出力
-                    // Log if any emoji were actually removed
-                    if (original != segment.Content)
-                    {
-                        AICharacterBridgePlugin.Instance?.Logger.LogDebug(
-                            $"[TalkSceneResponse] Emoji removed from segment content. " +
-                            $"Before: \"{original}\" / After: \"{segment.Content}\"");
-                    }
+                    return ParseAndValidate(candidateJson);
                 }
-
-                // 各セグメントの検証
-                foreach (var segment in response.ConversationSegments)
+                catch (Exception ex)
                 {
-                    if (string.IsNullOrEmpty(segment.Type))
-                        throw new FormatException("A segment is missing 'type'.");
-
-                    if (string.IsNullOrEmpty(segment.Content))
-                        throw new FormatException("A segment is missing 'content'.");
-
-                    if (string.IsNullOrEmpty(segment.Expression))
-                        throw new FormatException("A segment is missing 'expression'.");
-
-                    if (string.IsNullOrEmpty(segment.CharaMotion))
-                        throw new FormatException("A segment is missing 'pose'.");
+                    lastError = ex;
+                    AICharacterBridgePlugin.Instance?.Logger.LogDebug(
+                        $"[TalkSceneResponse] JSON candidate #{i} " +
+                        $"(chars {span.Start}-{span.Start + span.Length - 1}) failed validation: {ex.Message}");
                 }
+            }
 
-                return response;
-            }
-            catch (JsonException ex)
-            {
-                throw new Exception($"Failed to parse AI response (JSON parse error): {ex.Message}\nRaw response: {jsonString}", ex);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to parse AI response: {ex.Message}\nRaw response: {jsonString}", ex);
-            }
+            throw new Exception(
+                $"Failed to parse AI response: none of the {candidates.Count} JSON candidate(s) passed validation.\n" +
+                $"Last error: {lastError?.Message}\nRaw response: {jsonString}",
+                lastError);
         }
 
         /// <summary>
-        /// AIレスポンスをクリーニングして純粋なJSON文字列を抽出します。
-        /// Markdownコードブロック（```json ... ```）や余分な文字を除去します。
-        /// Cleans AI response to extract pure JSON string.
-        /// Removes Markdown code blocks (```json ... ```) and extraneous characters.
+        /// テキスト全体を走査し、文字列リテラル内の中括弧を除外しながら、
+        /// トップレベル（ネストしていない）の完全なJSONオブジェクトの範囲をすべて抽出します。
+        /// Scans the entire text and extracts the spans of all complete top-level
+        /// (non-nested) JSON objects, while ignoring braces that appear inside
+        /// string literals.
+        ///
+        /// Algorithm overview:
+        ///   - While inside a double-quoted string literal, '{' and '}' are not counted.
+        ///   - Backslash escapes (\", \\, etc.) inside strings are handled correctly.
+        ///   - Outside of string literals, '{' increases depth by 1 and '}' decreases it by 1.
+        ///   - The position where depth transitions from 0 to 1 is recorded as a
+        ///     candidate's start; the position where it returns from 1 to 0 closes
+        ///     that candidate.
+        ///   - A stray '}' with no matching '{' is ignored (treated as malformed
+        ///     structure and skipped).
         /// </summary>
-        /// <param name="response">AIからの生レスポンス</param>
-        /// <returns>クリーニングされたJSON文字列</returns>
-        private static string CleanJsonResponse(string response)
+        /// <param name="text">走査対象の文字列 / Text to scan</param>
+        /// <returns>検出されたJSONオブジェクト候補のリスト（テキスト中の出現順）/ List of detected JSON object candidates, in order of appearance</returns>
+        private static List<JsonSpan> FindJsonObjectCandidates(string text)
         {
-            if (string.IsNullOrEmpty(response))
-                return response;
+            var candidates = new List<JsonSpan>();
 
-            // 前後の空白・改行を削除
-            response = response.Trim();
+            bool inString = false;
+            bool escapeNext = false;
+            int depth = 0;
+            int currentStart = -1;
 
-            // 1. Markdownコードブロックの除去
-            // ```json ... ``` または ``` ... ``` 形式に対応
-
-            // 先頭の ```json を削除
-            if (response.StartsWith("```json"))
+            for (int i = 0; i < text.Length; i++)
             {
-                response = response.Substring(7); // "```json" の長さ = 7
-                AICharacterBridgePlugin.Instance?.Logger.LogDebug(
-                    "[TalkSceneResponse] Removed leading '```json' from response");
-            }
-            // 先頭の ``` を削除（jsonが付いていない場合）
-            else if (response.StartsWith("```"))
-            {
-                response = response.Substring(3); // "```" の長さ = 3
-                AICharacterBridgePlugin.Instance?.Logger.LogDebug(
-                    "[TalkSceneResponse] Removed leading '```' from response");
-            }
+                char c = text[i];
 
-            // 再度トリム（コードブロック除去後の空白対策）
-            response = response.Trim();
-
-            // 末尾の ``` を削除
-            if (response.EndsWith("```"))
-            {
-                response = response.Substring(0, response.Length - 3);
-                AICharacterBridgePlugin.Instance?.Logger.LogDebug(
-                    "[TalkSceneResponse] Removed trailing '```' from response");
-            }
-
-            // 再度トリム
-            response = response.Trim();
-
-            // 2. JSON開始位置と終了位置を探す（念のための安全策）
-            int jsonStart = response.IndexOf('{');
-            int jsonEnd = response.LastIndexOf('}');
-
-            if (jsonStart >= 0 && jsonEnd > jsonStart)
-            {
-                // JSON部分のみを抽出
-                string extractedJson = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
-
-                // 抽出前後で変化があった場合はログ出力
-                if (extractedJson != response)
+                if (inString)
                 {
-                    AICharacterBridgePlugin.Instance?.Logger.LogDebug(
-                        $"[TalkSceneResponse] Extracted JSON from position {jsonStart} to {jsonEnd}");
+                    if (escapeNext)
+                    {
+                        // エスケープされた文字はそのまま読み飛ばす
+                        // Skip the escaped character as-is
+                        escapeNext = false;
+                    }
+                    else if (c == '\\')
+                    {
+                        escapeNext = true;
+                    }
+                    else if (c == '"')
+                    {
+                        inString = false;
+                    }
+
+                    continue;
                 }
 
-                return extractedJson;
+                if (c == '"')
+                {
+                    inString = true;
+                    continue;
+                }
+
+                if (c == '{')
+                {
+                    if (depth == 0)
+                        currentStart = i;
+
+                    depth++;
+                }
+                else if (c == '}')
+                {
+                    if (depth > 0)
+                    {
+                        depth--;
+
+                        if (depth == 0 && currentStart >= 0)
+                        {
+                            candidates.Add(new JsonSpan(currentStart, i - currentStart + 1));
+                            currentStart = -1;
+                        }
+                    }
+                    // depth が既に 0 の状態での余分な '}' は無視する
+                    // Ignore an extra '}' encountered while depth is already 0
+                }
             }
-            else
+
+            return candidates;
+        }
+
+        /// <summary>
+        /// JSON候補文字列をデシリアライズし、必須フィールドの検証と絵文字除去を行います。
+        /// 検証に失敗した場合は例外をスローします（呼び出し側で次の候補にフォールバックするため）。
+        ///
+        /// Deserializes a candidate JSON string, validates required fields, and
+        /// removes emoji from segment content.
+        /// Throws an exception on validation failure so the caller can fall back
+        /// to the next candidate.
+        /// </summary>
+        /// <param name="candidateJson">JSONオブジェクト候補の文字列 / Candidate JSON object string</param>
+        /// <returns>検証済みの TalkSceneResponse インスタンス / Validated TalkSceneResponse instance</returns>
+        /// <exception cref="FormatException">必須フィールドが不足している場合 / When a required field is missing</exception>
+        /// <exception cref="JsonException">JSON解析に失敗した場合 / When JSON parsing fails</exception>
+        private static TalkSceneResponse ParseAndValidate(string candidateJson)
+        {
+            var response = JsonConvert.DeserializeObject<TalkSceneResponse>(candidateJson);
+
+            if (response == null)
+                throw new FormatException("Deserialization returned null.");
+
+            // 必須フィールドの検証
+            // Validate required fields
+            if (response.ConversationSegments == null || response.ConversationSegments.Count == 0)
+                throw new FormatException("'conversation_segments' is missing or empty in AI response.");
+
+            if (string.IsNullOrEmpty(response.ImpressionOnUser))
+                throw new FormatException("'impression_on_user' is missing or empty in AI response.");
+
+            if (string.IsNullOrEmpty(response.IsArousedByConversation))
+                throw new FormatException("'is_aroused_by_conversation' is missing or empty in AI response.");
+
+            if (string.IsNullOrEmpty(response.PostConversationAction))
+                throw new FormatException("'post_conversation_action' is missing or empty in AI response.");
+
+            // 各セグメントの Content から絵文字を除去する。
+            // バリデーションより前に実行することで、除去後の文字列に対して検証が行われる。
+            // Remove emoji from Content in each segment.
+            // Executed before validation so that the check runs against the sanitized string.
+            foreach (var segment in response.ConversationSegments)
             {
-                // JSON構造が見つからない場合は警告を出して元の文字列を返す
-                AICharacterBridgePlugin.Instance?.Logger.LogWarning(
-                    "[TalkSceneResponse] Could not find valid JSON structure ('{' and '}') in response");
+                if (segment == null) continue;
+
+                string original = segment.Content;
+                segment.Content = RemoveEmoji(segment.Content);
+
+                // 除去が発生した場合はデバッグログを出力
+                // Log if any emoji were actually removed
+                if (original != segment.Content)
+                {
+                    AICharacterBridgePlugin.Instance?.Logger.LogDebug(
+                        $"[TalkSceneResponse] Emoji removed from segment content. " +
+                        $"Before: \"{original}\" / After: \"{segment.Content}\"");
+                }
+            }
+
+            // 各セグメントの検証
+            // Validate each segment
+            foreach (var segment in response.ConversationSegments)
+            {
+                if (segment == null)
+                    throw new FormatException("A segment is null.");
+
+                if (string.IsNullOrEmpty(segment.Type))
+                    throw new FormatException("A segment is missing 'type'.");
+
+                if (string.IsNullOrEmpty(segment.Content))
+                    throw new FormatException("A segment is missing 'content'.");
+
+                if (string.IsNullOrEmpty(segment.Expression))
+                    throw new FormatException("A segment is missing 'expression'.");
+
+                if (string.IsNullOrEmpty(segment.CharaMotion))
+                    throw new FormatException("A segment is missing 'pose'.");
             }
 
             return response;
