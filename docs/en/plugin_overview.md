@@ -1,114 +1,114 @@
-# AI Character Bridge - Project Overview
+# AI Character Bridge - プロジェクト概要
 
-**Target Game**: Koikatsu (コイカツ)  
-**Last Updated**: June 2026
-
----
-
-## Project Overview
-
-### Purpose
-
-AI Character Bridge is a BepInEx plugin for Unity-based games (particularly Illusion's Koikatsu) that **connects AI to game characters**, enabling natural and context-aware conversations.
-
-### Key Features
-
-- **Extensible AI communication via Provider Pattern**: New AI clients (OpenAI, Claude, etc.) can be added with ease.
-- **CharacterCard & WorldSetting System**: Supports Character Card V2/V3 spec; character personality data and world settings are managed centrally in the game save data.
-- **Outfit Preset Support**: Clothing and appearance descriptions for each of the game's 7 outfit presets are stored alongside the CharacterCard and automatically reflected in prompts.
-- **Integrated Editor UI**: All CharacterCards and WorldSettings can be edited during the main game, including per-outfit-preset description editing.
-- **Extensible Log System**: New log types can be added without modifying existing code.
-- **Unified Data Management**: CharacterCards and logs are managed together per heroine.
-- **Turn-Based Conversation Management**: Each AI communication round is treated as a single "turn", structuring the flow of conversation.
-- **Automatic Session Management**: Conversation logs are automatically saved in sync with TalkScene start/end.
-- **User-Approved Action Execution**: Special actions suggested by the AI are only executed after user confirmation.
-- **General-Purpose Prompt Construction System**: A highly extensible template variable replacement system integrating order control, plain replacements, and tagged replacements.
-- **Optimized Log Formatting**: Past logs are presented in a format that is easy for lower-performance LLMs to understand.
-- **Modular Independent Save Mechanism**: Each module saves its data self-containedly to an independent ExtensibleSaveFormat slot.
-- **Modular Design**: Features are managed as independent modules, making them easy to add or remove.
-- **Robust AI Response Handling**: Handles AI output variations by automatically stripping Markdown code blocks and emoji, and validating required fields.
-
-### Technology Stack
-
-- **BepInEx**: MOD loader
-- **KKAPI**: Koikatsu API
-- **ExtensibleSaveFormat**: Extended save data
-- **Newtonsoft.Json**: JSON processing
-- **UnityEngine**: Game engine
-- **.NET Framework 3.5**: Target framework
+**対象ゲーム**: Koikatsu (コイカツ)  
+**最終更新**: 2026年7月
 
 ---
 
-## Architecture
+## プロジェクト概要
 
-### Directory Structure
+### 目的
+
+AI Character Bridgeは、Unityベースのゲーム（特にIllusion社のコイカツ）において、**AIとゲームキャラクターを接続**し、文脈に応じた自然で高度な対話を実現するBepInExプラグインです。
+
+### 主な機能
+
+- **プロバイダーパターンによる拡張可能なAI通信**: 新しいAIクライアント（OpenAI、Claude等）を簡単に追加可能
+- **CharacterCard & WorldSetting システム**: Character Card V2/V3規格に対応し、キャラクター人格データと世界設定をゲームセーブデータで一元管理
+- **衣装プリセット対応**: ゲームの衣装プリセット（7種類）ごとの服装・容姿説明文をCharacterCardに付随して管理し、プロンプトへ自動反映
+- **統合編集UI**: メインゲーム中にすべてのCharacterCardとWorldSettingを編集可能（衣装プリセットごとの説明文編集を含む）
+- **拡張可能なログシステム**: 新しいログタイプの追加が既存コード変更なしで可能
+- **統合データ管理**: HeroineごとのCharacterCardとログを一元管理
+- **ターン単位の会話管理**: AIとの1回の通信を1ターンとして管理し、会話の流れを構造化
+- **自動セッション管理**: TalkSceneの開始/終了と連動した会話ログの自動保存
+- **ユーザー承認型アクション実行**: AIが提案した特殊アクションはユーザーの承認後に実行
+- **汎用プロンプト構築システム**: 順序制御・通常置換・タグ付き置換を統合した拡張性の高いテンプレート変数置換機能
+- **最適化されたログフォーマット**: 低性能LLMでも理解しやすい形式で過去ログを提供
+- **モジュール独立セーブ機構**: 各モジュールが ExtensibleSaveFormat の独立したスロットに自己完結でデータを保存
+- **モジュール設計**: 機能を独立したモジュールとして管理し、追加・削除が容易
+- **AIレスポンスのロバスト処理**: 文字列リテラルを考慮したブレースマッチングによるJSONオブジェクト候補抽出（応答末尾側から順に検証）・絵文字除去・必須フィールドバリデーションにより、説明文中に紛れ込む中括弧やAIの出力揺れを吸収
+
+### 技術スタック
+
+- **BepInEx**: MODローダー
+- **KKAPI**: コイカツのAPI
+- **ExtensibleSaveFormat**: 拡張セーブデータ
+- **Newtonsoft.Json**: JSON処理
+- **UnityEngine**: ゲームエンジン
+- **.NET Framework 3.5**: ターゲットフレームワーク
+
+---
+
+## アーキテクチャ
+
+### ディレクトリ構成
 ```
 AICharacterBridge/
-├── Core/                              # Game-agnostic general-purpose components
-│   ├── Data/                          # General data models
-│   │   ├── CharacterCard.cs          # CharacterCard base class, V2/V3 implementations
+├── Core/                              # ゲーム非依存の汎用部分
+│   ├── Data/                          # 汎用データモデル
+│   │   ├── CharacterCard.cs          # CharacterCard基底クラス、V2/V3実装
 │   │   └── WorldSetting.cs
-│   ├── Communication/                 # AI communication layer (Provider Pattern)
-│   │   ├── Interfaces/               # Communication interfaces
-│   │   │   ├── IClientProvider.cs    # Provider interface (external API)
-│   │   │   ├── ICommunicationClient.cs # Communication client interface
-│   │   │   └── IResponseExtractor.cs # Response extraction interface
-│   │   ├── ClientRegistry.cs         # Client provider registry
-│   │   └── Clients/                  # Client implementations
-│   │       ├── Ollama/               # Ollama client
+│   ├── Communication/                 # AI通信層（プロバイダーパターン）
+│   │   ├── Interfaces/               # 通信インターフェース
+│   │   │   ├── IClientProvider.cs    # プロバイダーインターフェース（外部API）
+│   │   │   ├── ICommunicationClient.cs # 通信クライアントインターフェース
+│   │   │   └── IResponseExtractor.cs # レスポンス抽出インターフェース
+│   │   ├── ClientRegistry.cs         # クライアントプロバイダー管理
+│   │   └── Clients/                  # クライアント実装
+│   │       ├── Ollama/               # Ollamaクライアント
 │   │       │   ├── OllamaClient.cs
 │   │       │   ├── OllamaResponseExtractor.cs
 │   │       │   └── OllamaClientProvider.cs
-│   │       └── LMStudio/             # LM Studio client
+│   │       └── LMStudio/             # LM Studioクライアント
 │   │           ├── LMStudioClient.cs
 │   │           ├── LMStudioResponseExtractor.cs
 │   │           └── LMStudioClientProvider.cs
-│   ├── Prompt/                        # Prompt construction system
-│   │   ├── PromptReplacer.cs          # Variable replacement engine
-│   │   └── ReplaceEntry.cs           # Replacement entry data class
+│   ├── Prompt/                        # プロンプト構築システム
+│   │   ├── PromptReplacer.cs          # 変数置換エンジン
+│   │   └── ReplaceEntry.cs           # 置換エントリーデータクラス
 │   └── Utilities/
-│       └── ConfigurationManagerAttributes.cs  # For BepInEx ConfigurationManager
+│       └── ConfigurationManagerAttributes.cs  # BepInEx ConfigurationManager用
 │
-├── Data/                              # Data models and data access layer
-│   ├── GameDataFormatter.cs          # Data conversion (formatting) only
-│   ├── GameStateProvider.cs          # Current game state retrieval
-│   ├── CharacterCardProvider.cs      # CharacterCard retrieval and initialization (raw data)
-│   ├── CharacterCardResolver.cs      # CharacterCard placeholder resolution
-│   ├── CoordinateData.cs             # Per-outfit-preset clothing/appearance descriptions
-│   ├── MainGameLog.cs                # Main game log base class
-│   ├── MainGameLogCollection.cs      # Log collection management
-│   ├── HeroineGameData.cs            # Integrated heroine data (Card + Logs)
-│   ├── ExpressionData.cs             # Expression data
-│   ├── CharaMotionData.cs            # Motion data
-│   ├── ExpressionPresets.cs          # Expression presets
-│   └── CharaMotionPresets.cs         # Motion presets
+├── Data/                              # データモデル・データアクセス層
+│   ├── GameDataFormatter.cs          # データ変換（フォーマット）専用
+│   ├── GameStateProvider.cs          # 現在のゲーム状態取得
+│   ├── CharacterCardProvider.cs      # CharacterCard取得と初期化（生データ）
+│   ├── CharacterCardResolver.cs      # CharacterCardのプレースホルダー解決
+│   ├── CoordinateData.cs             # 衣装プリセットごとの服装・容姿説明文
+│   ├── MainGameLog.cs                # メインゲームログ基底クラス
+│   ├── MainGameLogCollection.cs      # ログコレクション管理
+│   ├── HeroineGameData.cs            # Heroine統合データ（Card + Logs）
+│   ├── ExpressionData.cs             # 表情データ
+│   ├── CharaMotionData.cs            # モーションデータ
+│   ├── ExpressionPresets.cs          # 表情プリセット
+│   └── CharaMotionPresets.cs         # モーションプリセット
 │
-├── TalkSceneChat/                     # TalkSceneChat module
-│   ├── TalkSceneChatModule.cs        # Module entry point (MonoBehaviour)
-│   ├── TalkSceneChatGameController.cs # Module-dedicated save controller
-│   ├── TalkSceneChatSaveData.cs      # Module-dedicated save data
-│   ├── TalkSceneSessionManager.cs    # Conversation session management
-│   ├── TalkSceneLogFormatter.cs      # Log formatting
-│   ├── TalkSceneActionFilter.cs      # Available action determination
-│   ├── TalkSceneActionExecutor.cs    # Special action execution
-│   ├── TalkSceneEventExecutor.cs     # ADV event construction and execution
-│   ├── TalkScenePromptBuilder.cs     # Prompt construction
-│   ├── Data/                          # TalkSceneChat-specific data
+├── TalkSceneChat/                     # TalkSceneChatモジュール
+│   ├── TalkSceneChatModule.cs        # モジュール本体（MonoBehaviour）
+│   ├── TalkSceneChatGameController.cs # モジュール専用セーブコントローラー
+│   ├── TalkSceneChatSaveData.cs      # モジュール専用セーブデータ
+│   ├── TalkSceneSessionManager.cs    # 会話セッション管理
+│   ├── TalkSceneLogFormatter.cs      # ログフォーマット処理
+│   ├── TalkSceneActionFilter.cs      # 利用可能アクション判定
+│   ├── TalkSceneActionExecutor.cs    # 特殊アクション実行
+│   ├── TalkSceneEventExecutor.cs     # ADVイベント構築・実行
+│   ├── TalkScenePromptBuilder.cs     # プロンプト構築
+│   ├── Data/                          # TalkSceneChat専用データ
 │   │   ├── TalkSceneLog.cs
-│   │   ├── ConversationTurn.cs       # Conversation turn (one communication unit)
+│   │   ├── ConversationTurn.cs       # 会話ターン（1回の通信単位）
 │   │   ├── ConversationEntry.cs
 │   │   ├── ConversationEntryType.cs
 │   │   ├── ChatEntry.cs
 │   │   ├── ActionEntry.cs
-│   │   └── HeroineChatSettings.cs    # Per-heroine chat settings (context_note, etc.)
-│   ├── Response/                      # Response processing
-│   │   ├── TalkSceneResponse.cs
+│   │   └── HeroineChatSettings.cs    # ヒロイン固有チャット設定（context_note等）
+│   ├── Response/                      # レスポンス処理
+│   │   ├── TalkSceneResponse.cs      # AI応答のパース・検証（JSON候補抽出方式）
 │   │   └── DialogueSegment.cs
-│   ├── UI/                            # TalkSceneChat-specific UI
+│   ├── UI/                            # TalkSceneChat専用UI
 │   │   └── TalkSceneUI.cs
-│   └── TalkSceneDefaultTemplate.cs   # Default prompt (tags are added by the Builder)
+│   └── TalkSceneDefaultTemplate.cs   # デフォルトプロンプト（タグ構造はBuilder側で付与）
 │
-├── UI/                                # Common UI components
+├── UI/                                # 共通UIコンポーネント
 │   └── CharacterCardEditorUI.cs
 │
 ├── AICharacterBridgePlugin.cs
@@ -118,168 +118,168 @@ AICharacterBridge/
 
 ---
 
-## Modular Design
+## モジュール設計
 
-### Overview
+### 概要
 
-The plugin manages features in **module units**. Each module is independent, and can be added or removed with minimal impact on the plugin core.
+プラグインは**モジュール単位**で機能を管理します。各モジュールは独立しており、プラグイン本体への影響を最小限に抑えて追加・削除が可能です。
 
-### Module Structure
+### モジュール構造
 
-Each module has the following structure:
+各モジュールは以下の構成を持ちます：
 ```
 ModuleName/
-├── ModuleNameModule.cs          # Module entry point (MonoBehaviour)
-├── ModuleNameGameController.cs  # Module-dedicated save controller
-├── ModuleNameSaveData.cs        # Module-dedicated save data
-├── Data/                         # Module-specific data
-├── UI/                           # Module-specific UI
-└── Other required components
+├── ModuleNameModule.cs          # モジュール本体（MonoBehaviour）
+├── ModuleNameGameController.cs  # モジュール専用セーブコントローラー
+├── ModuleNameSaveData.cs        # モジュール専用セーブデータ
+├── Data/                         # モジュール専用データ
+├── UI/                           # モジュール専用UI
+└── その他必要なコンポーネント
 ```
 
-Each module's save mechanism is handled by a dedicated controller inheriting from `GameCustomFunctionController`. Data is saved to an independent ExtensibleSaveFormat slot, identified by `ModuleGUID` (`AICharacterBridgePlugin.GUID + ".modulename"`). This ensures complete separation of module-specific data from the core save data (`AICharacterBridgeSaveData`).
+モジュールのセーブ機構は `GameCustomFunctionController` を継承した専用コントローラーが担い、`ModuleGUID`（`AICharacterBridgePlugin.GUID + ".modulename"`）をキーとして ExtensibleSaveFormat の独立したスロットにデータを保存します。これにより、コアのセーブデータ（`AICharacterBridgeSaveData`）からモジュール固有データが完全に分離されます。
 
-### TalkSceneChat Module
+### TalkSceneChatモジュール
 
-A module that provides AI conversation functionality during talk scenes. Achieves fully automatic session management synchronized with the TalkScene lifecycle.
+会話シーンでのAI対話機能を提供するモジュール。TalkSceneのライフサイクルと完全連動した自動セッション管理を実現。
 
-#### Architecture
+#### アーキテクチャ
 ```
-TalkSceneChatGameController (save management · GameCustomFunctionController)
-├── ExtensibleSaveFormat independent slot (GUID: "...kk.talkscenechat")
-├── TalkSceneChatSaveData save/restore
-└── Exposes TalkSceneChatSaveData.CurrentSaveData
+TalkSceneChatGameController（セーブ管理・GameCustomFunctionController）
+├── ExtensibleSaveFormat 独立スロット（GUID: "...kk.talkscenechat"）
+├── TalkSceneChatSaveData の保存・復元
+└── TalkSceneChatSaveData.CurrentSaveData を公開
 
-TalkSceneChatModule (control layer · MonoBehaviour)
-├── Monitors TalkScene start/end (Update())
-├── Automatic session start/end
-├── UI open/close control (enabled property)
-└── Provides reference to SessionManager
+TalkSceneChatModule（制御層・MonoBehaviour）
+├── TalkScene開始/終了の監視（Update()）
+├── セッションの自動開始/終了
+├── UI開閉制御（enabled プロパティ）
+└── SessionManagerへの参照提供
 
-TalkSceneSessionManager (session management)
-├── Session state management (IsSessionActive)
-├── ActiveSessionLog management
-├── Turn addition
-└── Log save processing
+TalkSceneSessionManager（セッション管理）
+├── セッション状態管理（IsSessionActive）
+├── ActiveSessionLogの保持と操作
+├── ターンの追加
+└── ログ保存処理
 
-TalkSceneLogFormatter (log formatting)
-├── Integrates past logs and current session log
-├── Used by both UI and prompt builder
-└── Single responsibility via static methods
+TalkSceneLogFormatter（ログフォーマット）
+├── 過去ログと現在セッションログの統合
+├── UIとプロンプトビルダー両方で使用
+└── 静的メソッドによる単一責任
 
-TalkSceneUI (presentation layer · ImguiWindow)
-├── UI rendering only
-├── User input handling
-└── Accesses session via module
+TalkSceneUI（表示層・ImguiWindow）
+├── UI描画のみ
+├── ユーザー入力受付
+└── モジュール経由でセッションにアクセス
 
-TalkScenePromptBuilder (prompt construction)
-├── Retrieves placeholder-resolved cards via CharacterCardResolver
-├── WorldSetting retrieval (from core save data)
-├── Log formatting using TalkSceneLogFormatter
-├── context_note retrieval (from TalkSceneChatGameController.CurrentSaveData)
-├── Available action filtering
-└── Builds ReplaceEntry list and performs batch replacement via PromptReplacer.ReplaceAll
-    ├── Plain: used inline within the template (including cases where enclosing tags are written directly)
-    ├── Tagged block: template has only {{key}}, tags are added by the Builder
-    └── Tagged block + note: when the tag requires a note attribute
+TalkScenePromptBuilder（プロンプト構築）
+├── CharacterCardResolver でプレースホルダー解決済みのカードを取得
+├── WorldSetting取得（コアセーブデータから）
+├── TalkSceneLogFormatterを使用したログフォーマット
+├── context_note 取得（TalkSceneChatGameController.CurrentSaveData から）
+├── 利用可能アクションのフィルタリング
+└── ReplaceEntry リストの構築と PromptReplacer.ReplaceAll による一括置換
+    ├── Plain: テンプレート内でインラインで使用される場合（囲みタグが直書きされている場合を含む）
+    ├── Tagged block: テンプレートは {{key}} のみ記述し、タグをBuilder側で付与する場合
+    └── Tagged block + note: タグに note 属性が必要な場合
 
-TalkSceneActionFilter (action determination)
-├── Determines available actions based on game state
-└── Generates action button text
+TalkSceneActionFilter（アクション判定）
+├── ゲーム状態に基づく利用可能アクション判定
+└── アクションボタンのテキスト生成
 
-TalkSceneActionExecutor (action execution)
-├── Executes special actions
-└── Modifies game state
+TalkSceneActionExecutor（アクション実行）
+├── 特殊アクションの実行
+└── ゲームステートの変更
 
-TalkSceneEventExecutor (event execution)
-├── Constructs ADV events
-└── Executes events
-```
-
-#### Session Management Flow
-```
-1. TalkScene starts (targetHeroine set)
-   ↓
-2. TalkSceneChatModule detects it
-   → SessionManager.StartSession() runs automatically
-   → ActiveSessionLog created
-   ↓
-3. User runs chat (UI open/close is optional)
-   ↓
-4. TalkSceneUI → creates ConversationTurn → SessionManager.AddTurn()
-   → Accumulated in ActiveSessionLog
-   ↓
-5. TalkScene ends
-   ↓
-6. TalkSceneChatModule detects it
-   → SessionManager.EndSession() runs automatically
-   → Log saved to core save data
-   → UI auto-closes (enabled = false)
+TalkSceneEventExecutor（イベント実行）
+├── ADVイベントの構築
+└── イベントの実行
 ```
 
-#### Key Components
+#### セッション管理フロー
+```
+1. TalkScene開始（targetHeroine設定済み）
+   ↓
+2. TalkSceneChatModule が検知
+   → SessionManager.StartSession() 自動実行
+   → ActiveSessionLog 作成
+   ↓
+3. ユーザーがチャット実行（UI開閉は任意）
+   ↓
+4. TalkSceneUI → ConversationTurn作成 → SessionManager.AddTurn()
+   → ActiveSessionLog に蓄積
+   ↓
+5. TalkScene終了
+   ↓
+6. TalkSceneChatModule が検知
+   → SessionManager.EndSession() 自動実行
+   → ログをコアセーブデータに保存
+   → UI自動クローズ（enabled = false）
+```
 
-**TalkSceneChatGameController.cs (GameCustomFunctionController)**
-- Saves/restores TalkSceneChat-specific data to an independent ExtensibleSaveFormat slot
-- Exposes `CurrentSaveData` (`TalkSceneChatSaveData`) as a global access point
-- Uses `TalkSceneChatModule.ModuleGUID` (`"...kk.talkscenechat"`) as the slot key
+#### 主要コンポーネント
+
+**TalkSceneChatGameController.cs（GameCustomFunctionController）**
+- ExtensibleSaveFormat の独立スロットで TalkSceneChat 固有データを保存・復元
+- `CurrentSaveData`（`TalkSceneChatSaveData`）をグローバルアクセスポイントとして公開
+- `TalkSceneChatModule.ModuleGUID`（`"...kk.talkscenechat"`）をスロットキーとして使用
 
 **TalkSceneChatSaveData.cs**
-- `CustomPromptTemplate`: Custom prompt template string (uses `TalkSceneDefaultTemplate.GetTemplate()` when null or empty)
-- `HeroineSettingsList`: List of per-heroine chat settings (for serialization)
-- `GetContextNote(heroine)` / `SetContextNote(heroine, note)`: Per-heroine `context_note` access
-- Follows the same `PrepareForSave` / `RestoreAfterLoad` pattern as `HeroineGameData` / `AICharacterBridgeSaveData`
+- `CustomPromptTemplate`: カスタムプロンプトテンプレート文字列（未設定の場合は `TalkSceneDefaultTemplate.GetTemplate()` を使用）
+- `HeroineSettingsList`: ヒロインごとのチャット設定リスト（シリアライズ用）
+- `GetContextNote(heroine)` / `SetContextNote(heroine, note)`: ヒロインごとの `context_note` アクセス
+- `HeroineGameData` / `AICharacterBridgeSaveData` と同じ `PrepareForSave` / `RestoreAfterLoad` パターンを踏襲
 
-**TalkSceneChatModule.cs (MonoBehaviour)**
-- `ModuleGUID` constant (`AICharacterBridgePlugin.GUID + ".talkscenechat"`)
-- Calls `GameAPI.RegisterExtraBehaviour<TalkSceneChatGameController>(ModuleGUID)` inside `Initialize()`
-- Monitors TalkScene state in `Update()`, manages session lifecycle
-- When UI is opened, calls `InitializePromptTemplate()` and `InitializeContextNote()` to set initial values in UI
-  - `InitializePromptTemplate()`: Uses `TalkSceneChatSaveData.CustomPromptTemplate` if set; otherwise uses `TalkSceneDefaultTemplate.GetTemplate()`
+**TalkSceneChatModule.cs（MonoBehaviour）**
+- `ModuleGUID` 定数（`AICharacterBridgePlugin.GUID + ".talkscenechat"`）
+- `Initialize()` 内で `GameAPI.RegisterExtraBehaviour<TalkSceneChatGameController>(ModuleGUID)` を呼び出し
+- Update() でTalkScene状態監視、セッションライフサイクル管理
+- UI 開放時に `InitializePromptTemplate()` および `InitializeContextNote()` を呼び出し、各初期値を UI に反映
+  - `InitializePromptTemplate()`: `TalkSceneChatSaveData.CustomPromptTemplate` が設定されていればそれを使用し、未設定なら `TalkSceneDefaultTemplate.GetTemplate()` を使用する
 
 **TalkSceneSessionManager.cs**
-- Session state management (`IsSessionActive`)
-- ActiveSessionLog manipulation
-- Turn addition and management
-- Auto-save of logs (to core save data)
+- セッション状態管理（IsSessionActive）
+- ActiveSessionLogの操作
+- ターンの追加と管理
+- ログの自動保存（コアセーブデータへ）
 
 **TalkSceneLogFormatter.cs**
-- Integrated formatting of past logs and current session log
-- Shared use by both UI and prompt builder
-- Single responsibility via static methods
+- 過去ログと現在セッションログの統合フォーマット
+- UIとプロンプトビルダー両方で共通使用
+- 静的メソッドによる単一責任の実現
 
-**TalkSceneUI.cs (ImguiWindow)**
-- Pure presentation layer
-- `CustomPromptTemplate` read/write via `TalkSceneChatGameController.CurrentSaveData`
-  - Prompt tab "Apply Changes": sets `CustomPromptTemplate` to `null` (reverts to default) if the edited text matches `TalkSceneDefaultTemplate.GetTemplate()`; otherwise saves as `CustomPromptTemplate`
-  - Prompt tab "Reset": overwrites the editing text with `TalkSceneDefaultTemplate.GetTemplate()` (save data is updated only on "Apply Changes")
-- `context_note` read/write via `TalkSceneChatGameController.CurrentSaveData`
-- Log read/write via `GameController.CurrentSaveData` (logs are under core data management)
+**TalkSceneUI.cs（ImguiWindow）**
+- 純粋な表示層
+- `CustomPromptTemplate` の読み書きは `TalkSceneChatGameController.CurrentSaveData` 経由
+  - Prompt タブの「Apply Changes」は、編集中のテキストが `TalkSceneDefaultTemplate.GetTemplate()` と一致する場合は `CustomPromptTemplate` を `null` にしてデフォルトへ戻し、異なる場合はそのテキストを `CustomPromptTemplate` として保存する
+  - Prompt タブの「Reset」は、編集中のテキストを `TalkSceneDefaultTemplate.GetTemplate()` で上書きする（セーブデータへの反映は「Apply Changes」時）
+- `context_note` の読み書きは `TalkSceneChatGameController.CurrentSaveData` 経由
+- ログの読み書きは `GameController.CurrentSaveData` 経由（ログはコアデータ管轄）
 
-**Configuration:**
-- `Toggle UI Key`: Key to toggle UI visibility (default: "L")
-- `Enable Favorability Update`: Whether to reflect conversation content in heroine's favorability (default: true)
-- `Enable Arousal Update`: Whether to reflect conversation content in heroine's arousal level (default: true)
+**設定項目:**
+- `Toggle UI Key`: UI表示切り替えキー（デフォルト: "L"キー）
+- `Enable Favorability Update`: 会話内容をヒロインの好感度に反映するか（デフォルト: true）
+- `Enable Arousal Update`: 会話内容をヒロインの性的興奮度に反映するか（デフォルト: true）
 
-**Adding to the Plugin:**
+**プラグインへの導入:**
 ```csharp
 // AICharacterBridgePlugin.cs
 private void InitializeModules()
 {
     TalkSceneChatModule.Initialize(gameObject, Config);
-    // Add future modules here
+    // 将来的に他のモジュールもここに追加
 }
 ```
 
-### How to Add a New Module
+### 新しいモジュールの追加方法
 
-1. Create a module directory
-2. Create `{ModuleName}Module.cs` (inheriting MonoBehaviour) and register the dedicated controller inside `Initialize()`
-3. Create `{ModuleName}GameController.cs` (inheriting GameCustomFunctionController)
-4. Create `{ModuleName}SaveData.cs`
-5. Add one line to `AICharacterBridgePlugin.InitializeModules()`
+1. モジュールディレクトリを作成
+2. `{ModuleName}Module.cs`（MonoBehaviour継承）を作成し、`Initialize()` 内で専用コントローラーを登録
+3. `{ModuleName}GameController.cs`（GameCustomFunctionController継承）を作成
+4. `{ModuleName}SaveData.cs` を作成
+5. `AICharacterBridgePlugin.InitializeModules()` に1行追加
 
-Example:
+例：
 ```csharp
 // DateSystemModule.cs
 public class DateSystemModule : MonoBehaviour
@@ -297,34 +297,33 @@ public class DateSystemModule : MonoBehaviour
 private void InitializeModules()
 {
     TalkSceneChatModule.Initialize(gameObject, Config);
-    DateSystemModule.Initialize(gameObject, Config);  // ← Add this line
+    DateSystemModule.Initialize(gameObject, Config);  // ← 追加
 }
-```
-
 ---
 
-## Communication Layer (Core/Communication)
 
-### Adopting the Provider Pattern
+## 通信層の設計（Core/Communication）
 
-The communication layer uses the **Provider Pattern**, where each AI client self-manages its own configuration, initialization, and communication.
+### プロバイダーパターンの採用
 
-### Architecture Diagram
+通信層は**プロバイダーパターン**を採用し、各AIクライアントが設定・初期化・通信を自己管理します。
+
+### アーキテクチャ図
 ```
-Plugin Core
+プラグイン本体
     ↓
-ClientRegistry (registry)
+ClientRegistry (レジストリ)
     ↓
-IClientProvider (external API)
-    ↓ used internally
+IClientProvider (外部API)
+    ↓ 内部で使用
 ICommunicationClient + IResponseExtractor
 ```
 
-### Interface Design
+### インターフェース設計
 
-#### IClientProvider (External API)
+#### IClientProvider（外部API）
 
-The only interface used by the plugin.
+プラグインが使用する唯一のインターフェース。
 ```csharp
 public interface IClientProvider
 {
@@ -334,14 +333,14 @@ public interface IClientProvider
 }
 ```
 
-**Characteristics:**
-- Self-manages everything from configuration registration to communication
-- No intermediate data structures like ClientOptions needed
-- The plugin side does not need to know the details of each configuration
+**特徴:**
+- 設定の登録から通信まで全て自己管理
+- ClientOptionsなどの中間データ構造が不要
+- プラグイン側は設定の詳細を意識しない
 
-#### ICommunicationClient (Internal API)
+#### ICommunicationClient（内部API）
 
-Handles low-level communication.
+低レベル通信を担当。
 ```csharp
 public interface ICommunicationClient
 {
@@ -351,9 +350,9 @@ public interface ICommunicationClient
 }
 ```
 
-#### IResponseExtractor (Internal API)
+#### IResponseExtractor（内部API）
 
-Extracts the message from an AI response.
+AIレスポンスからメッセージを抽出。
 ```csharp
 public interface IResponseExtractor
 {
@@ -364,7 +363,7 @@ public interface IResponseExtractor
 
 ### ClientRegistry
 
-A static class that manages all client providers.
+全てのクライアントプロバイダーを管理する静的クラス。
 ```csharp
 public static class ClientRegistry
 {
@@ -372,7 +371,7 @@ public static class ClientRegistry
     {
         RegisterProvider(new OllamaClientProvider());
         RegisterProvider(new LMStudioClientProvider());
-        // Add one line here to register new clients
+        // 新しいクライアントを追加する場合はここに1行追加
     }
     
     public static void RegisterAllConfigurationsTo(ConfigFile config);
@@ -380,43 +379,43 @@ public static class ClientRegistry
 }
 ```
 
-### Implemented Clients
+### 実装済みクライアント一覧
 
-| Client Name | Endpoint | Prompt Key | Response Extraction Path |
+| クライアント名 | エンドポイント | プロンプトキー | レスポンス取り出しパス |
 |---|---|---|---|
 | Ollama | `/api/generate` | `"prompt"` | `response` |
 | LM Studio | `/v1/responses` | `"input"` | `output[0].content[0].text` |
 
-#### Key Implementation Differences Between Ollama and LM Studio
+#### Ollama と LM Studio の主な実装上の差異
 
-| Comparison | Ollama | LM Studio |
+| 比較項目 | Ollama | LM Studio |
 |---|---|---|
-| LLM option passing | Nested under `"options": { ... }` | Flattened as top-level fields |
-| LLM options format | JSON without enclosing braces; written as the body of Ollama API's `options` object | JSON without enclosing braces; written as top-level fields of `/v1/responses` |
-| Token limit parameter name | `max_tokens` | `max_output_tokens` |
-| Model name | Required (cannot be empty) | Empty string allowed (auto-uses currently loaded model) |
-| Client instance creation | Held as a Provider field | Created on each `SendPrompt` call (because BaseUrl may change at runtime) |
-| Think option | Available. Dropdown with `"Default"` / `"True"` / `"False"`. Added as a top-level field via provider-specific method `SetThinkOption()` | Not available |
+| LLMオプションの渡し方 | `"options": { ... }` にネスト | トップレベルフィールドとして展開 |
+| LLMオプションの設定フォーマット | JSON形式（中括弧なし）。Ollama API の `options` オブジェクトの中身をそのまま記述 | JSON形式（中括弧なし）。`/v1/responses` のトップレベルフィールドをそのまま記述 |
+| トークン上限パラメーター名 | `max_tokens` | `max_output_tokens` |
+| モデル名 | 必須（空不可） | 空文字列許容（起動中のモデルを自動使用） |
+| クライアントインスタンスの生成 | Provider フィールドとして保持 | `SendPrompt` 呼び出し毎に生成（BaseUrl が実行時変更される可能性のため） |
+| think オプション | 設定項目あり。`"Default"` / `"True"` / `"False"` のドロップダウンで選択。トップレベルフィールドとして付与（`IClientProvider` 固有メソッド `SetThinkOption()` で設定） | なし |
 
 ---
 
-## Data Models
+## データモデル
 
 ### Core/Data
 
 #### CharacterCard
 
-Personality data for a character or user. Supports Character Card V2/V3 spec.
+キャラクターまたはユーザーの人格データ。Character Card V2/V3規格に対応。
 ```csharp
 public abstract class CharacterCard
 {
     [JsonProperty("raw_json")]
-    public string RawJson { get; set; }  // Full JSON retained
-
+    public string RawJson { get; set; }  // 完全なJSON保持
+    
     [JsonIgnore]
-    protected JObject ParsedData { get; set; }  // Parsed cache
-
-    // Common field accessors
+    protected JObject ParsedData { get; set; }  // パース済みキャッシュ
+    
+    // 共通フィールドアクセス
     public abstract string GetName();
     public abstract void SetName(string name);
     public abstract string GetDescription();
@@ -429,27 +428,27 @@ public abstract class CharacterCard
     public abstract void SetFirstMessage(string firstMes);
     public abstract string GetScenario();
     public abstract void SetScenario(string scenario);
-
-    // extensions access (managed hierarchically by namespace key)
+    
+    // extensions アクセス（名前空間キーで階層化して管理）
     public JToken GetExtensionValue(string namespaceKey, string key);
     public void SetExtensionValue(string namespaceKey, string key, JToken value);
     public void RemoveExtensionValue(string namespaceKey, string key);
     public bool HasExtensionValue(string namespaceKey, string key);
-
-    // Factory methods
+    
+    // ファクトリメソッド
     public static CharacterCard FromJson(string json);
     public static CharacterCard CreateNew(string version = "v2");
 }
 ```
 
-**Key Design Policies:**
-- Retains the full RAW JSON to prevent data loss
-- Supports both V2 and V3
-- Creates V2 by default when creating new cards
-- Retains even unused fields so no information is lost during import/export
-- Data inside `data.extensions` is managed hierarchically by namespace key; only the specified key is touched
+**重要な設計方針:**
+- RAW JSONを完全に保持し、データ欠落を防止
+- V2/V3の両方をサポート
+- 新規作成時はデフォルトでV2を使用
+- 使用しないフィールドも保持し、入出力で情報が失われない
+- `data.extensions` 内のデータは名前空間キーで階層化して管理。指定したキー以外には一切触れない
 
-**extensions JSON Structure:**
+**extensions の JSON 構造:**
 ```json
 {
   "extensions": {
@@ -460,7 +459,7 @@ public abstract class CharacterCard
 }
 ```
 
-**extensions-Related Constants (AICharacterBridgePlugin.cs):**
+**extensions 関連の定数（AICharacterBridgePlugin.cs）:**
 ```csharp
 public const string ExtensionNamespace = "ai_character_bridge_kk";
 public const string CoordinateDataKey  = "coordinate_data";
@@ -468,9 +467,9 @@ public const string CoordinateDataKey  = "coordinate_data";
 
 #### WorldSetting
 
-Game world setting data. Uses the same `spec / spec_version / data` structure as Character Card V2.
+ゲームの世界設定データ。Character Card V2 と同様の `spec / spec_version / data` 構造を採用しています。
 
-**JSON Structure:**
+**JSON 構造:**
 ```json
 {
   "spec": "world_setting",
@@ -484,120 +483,120 @@ Game world setting data. Uses the same `spec / spec_version / data` structure as
 ```csharp
 public class WorldSetting
 {
-    // spec identifier constant (used for file type validation)
+    // spec 識別子定数（ファイル種別の検証に使用）
     public const string SpecIdentifier = "world_setting";
     public const string CurrentSpecVersion = "1.0";
-
+    
     [JsonProperty("spec")]
-    public string Spec { get; set; }        // Always "world_setting"
-
+    public string Spec { get; set; }        // 常に "world_setting"
+    
     [JsonProperty("spec_version")]
-    public string SpecVersion { get; set; } // Currently "1.0"
-
+    public string SpecVersion { get; set; } // 現在は "1.0"
+    
     [JsonProperty("data")]
     public WorldSettingData Data { get; set; }
-
-    // Data access
+    
+    // データアクセス
     public string GetDescription();
     public void SetDescription(string description);
-
-    // Utilities
+    
+    // ユーティリティ
     public bool IsDefault();
     public WorldSetting Clone();
     public string FormatForPrompt();
     public string ToJson();
-
-    // Factory (FromJson validates the spec field;
-    // throws NotSupportedException if spec is not "world_setting")
+    
+    // ファクトリ（FromJson は spec フィールドを検証し、
+    // "world_setting" 以外であれば NotSupportedException をスローする）
     public static WorldSetting FromJson(string json);
     public static WorldSetting CreateNew();
 }
 ```
 
-**Design Characteristics:**
-- The `spec` field explicitly identifies the file type
-- `FromJson()` validates `spec` before loading, preventing loading of the wrong file type
-- Data access is done through `GetDescription()` / `SetDescription()`, shielding callers from internal structural changes
-- Unlike `CharacterCard`, the plugin fully controls this format, so RAW JSON retention is not performed
+**設計の特徴:**
+- `spec` フィールドによってファイル種別を明示的に識別できる
+- `FromJson()` がロード前に `spec` を検証するため、誤ったファイルの読み込みを防止できる
+- データアクセスは `GetDescription()` / `SetDescription()` 経由で行い、内部構造の変更から呼び出し側を保護する
+- `CharacterCard` と異なり、プラグインが完全に管理するフォーマットのため RAW JSON 保持は行わない
 
-### Core/Prompt - Prompt Construction System
+### Core/Prompt - プロンプト構築システム
 
 #### ReplaceEntry
 
-A class representing a replacement entry in a prompt template. Supports both plain replacements and tagged replacements (inline/block).
+プロンプトテンプレートの置換エントリーを表すクラス。通常置換とタグ付き置換（インライン／ブロック）の両方をサポートします。
 
 ```csharp
 public class ReplaceEntry
 {
-    public string Key      { get; }  // Placeholder key (e.g., "user_name")
-    public string Value    { get; }  // Replacement value
-    public bool   IsTagged { get; }  // Whether this is a tagged replacement
-    public string TagName  { get; }  // Tag name (used only when IsTagged is true)
-    public string Note     { get; }  // Tag note attribute (optional)
-    public bool   IsBlock  { get; }  // Whether to use block format (inserts newlines between tags)
-
-    // Factory methods
+    public string Key      { get; }  // プレースホルダーのキー（例: "user_name"）
+    public string Value    { get; }  // 置換する値
+    public bool   IsTagged { get; }  // タグ付き置換かどうか
+    public string TagName  { get; }  // タグ名（IsTagged == true のときのみ使用）
+    public string Note     { get; }  // タグの note 属性（オプション）
+    public bool   IsBlock  { get; }  // ブロック形式かどうか（タグ間に改行を挿入）
+    
+    // ファクトリメソッド
     public static ReplaceEntry Plain(string key, string value);
     public static ReplaceEntry Tagged(string key, string value, string tagName, bool block = true);
     public static ReplaceEntry Tagged(string key, string value, string tagName, string note, bool block = true);
-
-    // Utilities
+    
+    // ユーティリティ
     public static string FormatStringListAsJson(List<string> items);
 }
 ```
 
-**Factory Method Usage:**
+**ファクトリメソッドの使い分け:**
 
-| Method | Generated Entry |
+| メソッド | 生成されるエントリー |
 |---|---|
-| `Plain("key", value)` | Plain replacement. `{{key}}` → `value` |
-| `Tagged("key", value, "tag")` | Tagged replacement (block format). `{{key}}` → `<tag>\nvalue\n</tag>` |
-| `Tagged("key", value, "tag", block: false)` | Tagged replacement (inline format). `{{key}}` → `<tag>value</tag>` |
-| `Tagged("key", value, "tag", "note")` | Tagged replacement (block format with note). `{{key}}` → `<tag note="note">\nvalue\n</tag>` |
+| `Plain("key", value)` | 通常置換。`{{key}}` → `value` |
+| `Tagged("key", value, "tag")` | タグ付き置換（ブロック形式）。`{{key}}` → `<tag>\nvalue\n</tag>` |
+| `Tagged("key", value, "tag", block: false)` | タグ付き置換（インライン形式）。`{{key}}` → `<tag>value</tag>` |
+| `Tagged("key", value, "tag", "note")` | タグ付き置換（ブロック形式・note属性あり）。`{{key}}` → `<tag note="note">\nvalue\n</tag>` |
 
-**About the `block` Parameter:**
-When `block = true` (default), newlines are inserted between the opening and closing tags. Suitable for enclosing multi-line text. `block = false` is for inline replacement, used when embedding a short value inside an existing tag.
+**block パラメータについて:**
+`block = true`（デフォルト）のとき、開タグと閉タグの間に改行が挿入されます。複数行テキストを囲む場合に適しています。`block = false` はインライン置換で、短い値を既存タグ内に埋め込む場合に使用します。
 
-**Empty Value Handling in Tagged Replacements:**
-If `value` is `null` or empty, the entire line containing `{{key}}` is removed along with surrounding newlines. This ensures no extra blank lines remain in the template even when optional content like `{{world_setting}}` is not set.
+**タグ付き置換の空値処理:**
+`value` が `null` または空文字の場合、`{{key}}` を含む行が前後の改行ごとごっそり削除されます。`{{world_setting}}` のようにオプション情報で記述がない場合でも、テンプレートに余分な空行を残しません。
 
 #### PromptReplacer
 
-A static class that performs variable replacement in prompt templates. Used by both `CharacterCardResolver` and `TalkScenePromptBuilder`.
+プロンプトテンプレートの変数置換を行う静的クラス。`CharacterCardResolver` と `TalkScenePromptBuilder` の両方で使用します。
 
 ```csharp
 public static class PromptReplacer
 {
-    // Single plain replacement: {{key}} → value
+    // 単一の通常置換: {{key}} → value
     public static string Replace(string template, string key, string value);
-
-    // Single tagged replacement (without note)
-    // block=true (default): {{key}} → <tagName>\nvalue\n</tagName>
-    // block=false:          {{key}} → <tagName>value</tagName>
-    // If value is null or empty: removes the placeholder line
+    
+    // 単一のタグ付き置換（note なし）
+    // block=true (デフォルト): {{key}} → <tagName>\nvalue\n</tagName>
+    // block=false:             {{key}} → <tagName>value</tagName>
+    // value が null または空文字の場合: プレースホルダーを含む行を削除
     public static string ReplaceWithTag(string template, string key, string value, string tagName, bool block = true);
-
-    // Single tagged replacement (with note)
-    // block=true (default): {{key}} → <tagName note="note">\nvalue\n</tagName>
-    // block=false:          {{key}} → <tagName note="note">value</tagName>
-    // If value is null or empty: removes the placeholder line
+    
+    // 単一のタグ付き置換（note あり）
+    // block=true (デフォルト): {{key}} → <tagName note="note">\nvalue\n</tagName>
+    // block=false:             {{key}} → <tagName note="note">value</tagName>
+    // value が null または空文字の場合: プレースホルダーを含む行を削除
     public static string ReplaceWithTag(string template, string key, string value, string tagName, string note, bool block = true);
-
-    // Ordered batch replacement: processes the ReplaceEntry list in order
+    
+    // 順序付き一括置換: ReplaceEntry リストを順番に処理
     public static string ReplaceAll(string template, List<ReplaceEntry> entries);
 }
 ```
 
-**Usage Guidelines:**
-- Use `ReplaceAll` when making multiple replacements
-- The **order of the `ReplaceEntry` list is the replacement execution order**; use list position to control order when needed
-- Use `Replace` / `ReplaceWithTag` for single replacements
+**使い方のガイドライン:**
+- 複数の置換を行う場合は `ReplaceAll` を使用する
+- `ReplaceEntry` の **リストの順序が置換の実行順序** になる。順序を意識する必要がある場合はリスト内での位置で制御する
+- 単発の置換には `Replace` / `ReplaceWithTag` を使用する
 
-### Data - Data Access Layer
+### Data - データアクセス層
 
 #### GameDataFormatter
 
-A static class that converts in-game data to human/AI-readable strings. Responsible **only for conversion (formatting)**.
+ゲーム内データを人間/AI可読な文字列に変換する静的クラス。**変換（フォーマット）のみ**を担当。
 ```csharp
 public static class GameDataFormatter
 {
@@ -609,7 +608,7 @@ public static class GameDataFormatter
 
 #### GameStateProvider
 
-A static class for retrieving the current game state.
+現在のゲーム状態を取得する静的クラス。
 ```csharp
 public static class GameStateProvider
 {
@@ -622,90 +621,90 @@ public static class GameStateProvider
 
 #### CharacterCardProvider
 
-A static class responsible for retrieving CharacterCard data. Returns raw data with placeholders unresolved.  
-Use `CharacterCardResolver` when building prompts.
+CharacterCardデータの取得を担当する静的クラス。プレースホルダーは未解決の生データを返す。  
+プロンプト構築時は `CharacterCardResolver` を経由すること。
 ```csharp
 public static class CharacterCardProvider
 {
-    // Gets the Player's CharacterCard (placeholders unresolved)
+    // PlayerのCharacterCard取得（プレースホルダー未解決）
     public static CharacterCard GetPlayerCharacterCard();
-
-    // Gets the Heroine's CharacterCard (placeholders unresolved)
+    
+    // HeroineのCharacterCard取得（プレースホルダー未解決）
     public static CharacterCard GetHeroineCharacterCard(SaveData.Heroine heroine);
 }
 ```
 
 #### CharacterCardResolver
 
-A static class that resolves placeholders in CharacterCards based on the current game state.  
-**Use this when building prompts.**
+CharacterCard 内のプレースホルダーをゲームの現在状態に基づいて解決する静的クラス。  
+**プロンプト構築時はこちらを使用する。**
 
 ```csharp
 public static class CharacterCardResolver
 {
-    // Gets the player card and returns it with {{clothes}}/{{appearance}} resolved
-    // Outfit index is obtained from Singleton<Game>.Instance.Player.changeClothesType
-    // -1 (auto) is treated as index 0 for now
+    // プレイヤーカードを取得し、{{clothes}}/{{appearance}} を解決して返す
+    // 衣装インデックスは Singleton<Game>.Instance.Player.changeClothesType から取得
+    // -1（自動）は暫定的にインデックス 0 として扱う
     public static CharacterCard GetResolvedPlayerCard();
-
-    // Gets the heroine card and returns it with {{clothes}}/{{appearance}} resolved
-    // Outfit index is obtained from heroine.NowCoordinate
+    
+    // ヒロインカードを取得し、{{clothes}}/{{appearance}} を解決して返す
+    // 衣装インデックスは heroine.NowCoordinate から取得
     public static CharacterCard GetResolvedHeroineCard(SaveData.Heroine heroine);
 }
 ```
 
-**Design Characteristics:**
-- Does not modify the original CharacterCard (generates a clone from `RawJson` and applies replacements)
-- Uses `PromptReplacer.ReplaceAll` and `ReplaceEntry.Plain` to replace per field
-- Replacement target fields: Name / Description / Personality / MessageExample / FirstMessage / Scenario
-- If `CoordinateData` is not set, placeholders are replaced with empty strings (does not break existing behavior)
+**設計の特徴:**
+- 元の CharacterCard は変更しない（`RawJson` からクローンを生成して置換）
+- `PromptReplacer.ReplaceAll` と `ReplaceEntry.Plain` を使用してフィールドごとに置換
+- 置換対象フィールド: Name / Description / Personality / MessageExample / FirstMessage / Scenario
+- `CoordinateData` が未設定の場合は空文字列に置換（既存動作を破壊しない）
 
-**Supported Placeholders:**
+**対応プレースホルダー:**
 
-| Placeholder | Replacement Content |
+| プレースホルダー | 置換内容 |
 |---|---|
-| `{{clothes}}` | Clothing description for the current outfit preset |
-| `{{appearance}}` | Appearance description for the current outfit preset |
+| `{{clothes}}` | 現在の衣装プリセットに対応する服装説明文 |
+| `{{appearance}}` | 現在の衣装プリセットに対応する容姿説明文 |
 
 #### CoordinateData
 
-A class that holds clothing and appearance descriptions for each outfit preset (Coordinate).  
-Stored as JSON inside `CharacterCard`'s `data.extensions`.
+衣装プリセット（Coordinate）ごとの服装・容姿説明文を保持するクラス。  
+`CharacterCard` の `data.extensions` 内に JSON として格納される。
 
 ```csharp
 public class CoordinateData
 {
     public const int PresetCount = 7;
-
-    public List<string> Appearance { get; set; }  // 7 elements, appearance description per preset
-    public List<string> Clothes { get; set; }     // 7 elements, clothing description per preset
-
+    
+    public List<string> Appearance { get; set; }  // 要素数7、各プリセットの容姿説明文
+    public List<string> Clothes { get; set; }     // 要素数7、各プリセットの服装説明文
+    
     public string GetAppearance(int presetIndex);
     public string GetClothes(int presetIndex);
     public void SetAppearance(int presetIndex, string value);
     public void SetClothes(int presetIndex, string value);
-    public void EnsurePresetCount();  // Fills in missing elements after load
+    public void EnsurePresetCount();  // ロード後の要素数不足を補完
     public CoordinateData Clone();
 }
 ```
 
-**Outfit Preset Numbers:**
+**衣装プリセット番号:**
 
-| Index | Outfit |
+| インデックス | 衣装 |
 |---|---|
-| 0 | School Uniform (on campus) |
-| 1 | School Uniform (after school) |
-| 2 | Gym Clothes |
-| 3 | Swimsuit |
-| 4 | Club Activities |
-| 5 | Casual Wear |
-| 6 | Sleepwear |
+| 0 | 学生服（校内） |
+| 1 | 学生服（下校） |
+| 2 | 体操着 |
+| 3 | 水着 |
+| 4 | 部活 |
+| 5 | 私服 |
+| 6 | お泊り |
 
-### TalkSceneChat - Save Data
+### TalkSceneChat - セーブデータ
 
 #### TalkSceneChatSaveData
 
-Module-dedicated save data for the TalkSceneChat module. Managed by `TalkSceneChatGameController`.
+TalkSceneChatモジュール専用のセーブデータ。`TalkSceneChatGameController` が管理します。
 
 ```csharp
 public class TalkSceneChatSaveData
@@ -725,11 +724,11 @@ public class TalkSceneChatSaveData
 }
 ```
 
-When `CustomPromptTemplate` is `null` or empty, `TalkSceneDefaultTemplate.GetTemplate()` is used as the prompt template.
+`CustomPromptTemplate` が `null` または空文字の場合、プロンプトテンプレートには `TalkSceneDefaultTemplate.GetTemplate()` が使用されます。
 
 #### HeroineChatSettings
 
-Per-heroine TalkSceneChat settings data. Held as a list by `TalkSceneChatSaveData`.
+ヒロインごとの TalkSceneChat 設定データ。`TalkSceneChatSaveData` がリストで保持します。
 
 ```csharp
 public class HeroineChatSettings
@@ -738,39 +737,39 @@ public class HeroineChatSettings
     public int HeroineIndex { get; set; }
 
     [JsonProperty("context_note")]
-    public string ContextNote { get; set; }  // Expanded into the {{context_note}} placeholder
-
+    public string ContextNote { get; set; }  // {{context_note}} プレースホルダーに展開
+    
     public bool IsEmpty();
 }
 ```
 
-### TalkSceneChat - Log Formatting
+### TalkSceneChat - ログフォーマット
 
 #### TalkSceneLogFormatter
 
-A static class responsible for formatting TalkScene logs. Used by both UI and prompt builder.
+TalkSceneログのフォーマットを担当する静的クラス。UIとプロンプトビルダーの両方で使用。
 ```csharp
 public static class TalkSceneLogFormatter
 {
-    // Integrates and formats past logs and current session log
-    // sessionManager is optional (can display past logs only)
+    // 過去ログと現在セッションログを統合してフォーマット
+    // sessionManager は省略可能（過去ログのみ表示も可能）
     public static string FormatLogs(
         SaveData.Heroine heroine,
         TalkSceneSessionManager sessionManager = null);
 }
 ```
 
-### Data - Log System
+### Data - ログシステム
 
-#### MainGameLog (Base Class)
+#### MainGameLog（基底クラス）
 
-Base class for logs related to a heroine in the main game.
+メインゲーム内でのヒロインに関連するログの基底クラス。
 ```csharp
 public abstract class MainGameLog
 {
     [JsonProperty("elapsed_days")]
     public int ElapsedDays { get; set; }
-
+    
     public virtual string GetLogTypeName();
     public abstract string FormatForPrompt(MainGameLogCollection collection, int index);
     public abstract bool IsValid();
@@ -779,14 +778,14 @@ public abstract class MainGameLog
 }
 ```
 
-**Design Characteristics:**
-- Log types are managed by the type system rather than a `LogType` enum
-- New log types work simply by inheriting from `MainGameLog`
-- `FormatForPrompt()` can reference the entire collection (supports context-dependent omission logic)
+**設計の特徴:**
+- `LogType` enumは使用せず、型システムで管理
+- 新しいログタイプは `MainGameLog` を継承するだけで動作
+- `FormatForPrompt()` でコレクション全体を参照可能（文脈依存の省略ロジックに対応）
 
 #### MainGameLogCollection
 
-A class that manages a collection of logs.
+ログコレクションを管理するクラス。
 ```csharp
 public class MainGameLogCollection
 {
@@ -794,10 +793,10 @@ public class MainGameLogCollection
     public bool RemoveLog(MainGameLog log);
     public void ClearLogs();
     public List<MainGameLog> GetAllLogs();
-
+    
     public List<T> GetLogsByType<T>() where T : MainGameLog;
     public bool HasLogsOfType<T>() where T : MainGameLog;
-
+    
     public void IncrementAllLogDays();
     public void EnforceLogLimit(int maxLogs);
     public string FormatForPrompt();
@@ -807,22 +806,22 @@ public class MainGameLogCollection
 
 #### HeroineGameData
 
-A class that manages CharacterCards and logs for each heroine in an integrated manner. Managed by the core save data (`AICharacterBridgeSaveData`).
+HeroineごとのCharacterCardとログを統合管理するクラス。コアセーブデータ（`AICharacterBridgeSaveData`）が管理します。
 ```csharp
 public class HeroineGameData
 {
     [JsonProperty("heroine_index")]
     public int HeroineIndex { get; set; }
-
+    
     [JsonProperty("character_card_json")]
     public string CharacterCardJson { get; set; }
-
+    
     [JsonProperty("logs", ItemTypeNameHandling = TypeNameHandling.Auto)]
     public List<MainGameLog> Logs { get; set; }
-
+    
     public CharacterCard GetCharacterCard();
     public void SetCharacterCard(CharacterCard card);
-
+    
     public MainGameLogCollection GetLogCollection();
     public void IncrementAllLogDays();
     public void EnforceLogLimit(int maxLogs);
@@ -833,13 +832,13 @@ public class HeroineGameData
 
 #### ConversationTurn
 
-A class representing a single conversation turn (one round of communication with AI).
+AIとの1回の通信における会話のやり取り（ターン）を表すクラス。
 ```csharp
 public class ConversationTurn
 {
     [JsonProperty("entries", ItemTypeNameHandling = TypeNameHandling.Auto)]
     public List<ConversationEntry> Entries { get; set; }
-
+    
     public void AddEntry(ConversationEntry entry);
     public bool IsValid();
     public ConversationTurn Clone();
@@ -849,22 +848,22 @@ public class ConversationTurn
 
 #### TalkSceneLog
 
-Records the entire interaction of a single TalkScene.
+1回のTalkSceneでのやり取り全体を記録。
 ```csharp
 public class TalkSceneLog : MainGameLog
 {
     [JsonProperty("conversation_turns", ItemTypeNameHandling = TypeNameHandling.Auto)]
     public List<ConversationTurn> ConversationTurns { get; set; }
-
+    
     [JsonProperty("week")]
     public string Week { get; set; }
-
+    
     [JsonProperty("time_period")]
     public string TimePeriod { get; set; }
-
+    
     [JsonProperty("location")]
     public string Location { get; set; }
-
+    
     public void AddTurn(ConversationTurn turn);
     public int TurnCount { get; }
     public override string FormatForPrompt(MainGameLogCollection collection, int index);
@@ -872,16 +871,16 @@ public class TalkSceneLog : MainGameLog
 }
 ```
 
-**Data Structure:**
+**データ構造:**
 ```
 TalkSceneLog
 └── ConversationTurns: List<ConversationTurn>
-    ├── ConversationTurn #1 (1st communication round)
+    ├── ConversationTurn #1（1回目の通信）
     │   └── Entries: List<ConversationEntry>
     │       ├── ChatEntry (user message)
     │       ├── ChatEntry (character dialogue)
     │       └── ChatEntry (character observation)
-    ├── ConversationTurn #2 (2nd communication round)
+    ├── ConversationTurn #2（2回目の通信）
     │   └── Entries: List<ConversationEntry>
     │       ├── ChatEntry (user message)
     │       ├── ActionEntry
@@ -893,23 +892,23 @@ TalkSceneLog
 
 #### DialogueSegment
 
-A class representing a segment of conversation in the AI's response.
+AIの応答に含まれる会話の断片（セグメント）を表すクラス。
 
 ```csharp
 public class DialogueSegment
 {
     [JsonProperty("type")]
-    public string Type { get; set; }         // "dialogue" or "observation"
+    public string Type { get; set; }         // "dialogue" または "observation"
 
     [JsonProperty("content")]
-    public string Content { get; set; }      // Dialogue or description text
+    public string Content { get; set; }      // セリフまたは描写のテキスト
 
     [JsonProperty("expression")]
-    public string Expression { get; set; }  // Expression name (chosen from Available Expressions)
+    public string Expression { get; set; }  // 表情名（Available Expressions から選択）
 
     [JsonProperty("pose")]
-    public string CharaMotion { get; set; } // Pose name (chosen from Available Poses)
-
+    public string CharaMotion { get; set; } // ポーズ名（Available Poses から選択）
+    
     public bool IsValid();
     public DialogueSegment Clone();
 }
@@ -917,7 +916,7 @@ public class DialogueSegment
 
 #### TalkSceneResponse
 
-A class that stores the complete response from the AI. `TalkSceneUI` deserializes it using `FromJson()`.
+AIからの完全な応答を格納するクラス。`TalkSceneUI` が `FromJson()` でデシリアライズして使用します。
 
 ```csharp
 public class TalkSceneResponse
@@ -929,11 +928,11 @@ public class TalkSceneResponse
     public string ImpressionOnUser { get; set; }
 
     [JsonProperty("is_aroused_by_conversation")]
-    public string IsArousedByConversation { get; set; }  // "yes" or "no"
+    public string IsArousedByConversation { get; set; }  // "yes" または "no"
 
     [JsonProperty("post_conversation_action")]
     public string PostConversationAction { get; set; }
-
+    
     public static TalkSceneResponse FromJson(string jsonString);
     public bool IsValid();
     public TalkSceneResponse Clone();
@@ -942,60 +941,63 @@ public class TalkSceneResponse
 }
 ```
 
-**`FromJson()` Processing Flow:**
+**`FromJson()` の処理フロー:**
 
-1. **JSON Cleaning (`CleanJsonResponse()`)**: Strips Markdown code blocks (`` ```json ``` `` or `` ``` ``` ``) from AI output if present, and extracts the range from `{` to `}` to obtain a pure JSON string.
-2. **Deserialization**: Converts to object via `JsonConvert.DeserializeObject<TalkSceneResponse>()`.
-3. **Emoji Removal (`RemoveEmoji()`)**: Removes emoji from the `content` of each segment. Target ranges include major BMP emoji/symbol ranges (`U+2300–U+23FF`, `U+2600–U+27BF`, `U+2B00–U+2BFF`, etc.) and supplementary plane surrogate pairs (`U+1F000` and above).
-4. **Validation**: Validates all of the following and throws an exception if any are missing:
-   - `conversation_segments` is non-empty
-   - `impression_on_user`, `is_aroused_by_conversation`, `post_conversation_action` are non-empty
-   - Each segment's `type`, `content`, `expression`, `pose` are non-empty
+AIの応答にはJSON本体以外の説明文が混ざることがあり、その説明文中に単体の `{}` のような中括弧が登場すると、単純な文字列探索ではJSON抽出を誤る場合があります。そのため `FromJson()` は「候補抽出 → 末尾側から検証」という2段構えの方式を採用しています。
+
+1. **JSONオブジェクト候補の抽出（`FindJsonObjectCandidates()`）**: 応答テキスト全体を走査し、文字列リテラル（`"..."`、エスケープ含む）内の中括弧をカウント対象から除外したブレースマッチングにより、「トップレベルで完結した完全なJSONオブジェクト」の候補をすべて洗い出す。対応する `{` のない余分な `}` は無視する。
+2. **末尾候補からの検証（`ParseAndValidate()`）**: 抽出した候補を応答の末尾側から順に1つずつデシリアライズし、必須フィールドを検証する。検証に成功した最初の候補を採用する。ある候補の検証に失敗した場合（必須フィールド欠落・デシリアライズ失敗等）は、1つ前の候補にフォールバックする。
+3. **デシリアライズ**: 各候補は `JsonConvert.DeserializeObject<TalkSceneResponse>()` でオブジェクトに変換される。
+4. **絵文字除去（`RemoveEmoji()`）**: 各セグメントの `content` から絵文字を除去する。対象範囲はBMP範囲の主要な絵文字・記号（`U+2300–U+23FF`、`U+2600–U+27BF`、`U+2B00–U+2BFF` 等）と補助面のサロゲートペア（`U+1F000` 以降）。
+5. **バリデーション**: 以下の全項目を検証し、不足があれば例外をスローする（この候補は不採用となり、手順2のフォールバックに戻る）。
+   - `conversation_segments` が非空であること
+   - `impression_on_user`、`is_aroused_by_conversation`、`post_conversation_action` が非空であること
+   - 各セグメントの `type`、`content`、`expression`、`pose` が非空であること
 
 ---
 
-## How to Add a New Log Type
+## 新しいログタイプの追加方法
 
-New log types can be added **without modifying any existing code**:
+**既存コードの変更なしで**新しいログタイプを追加できます：
 ```csharp
-// 1. Create a class inheriting from MainGameLog (this is all you need!)
+// 1. MainGameLogを継承したクラスを作成（これだけ！）
 public class DateLog : MainGameLog
 {
     [JsonProperty("location")]
     public string Location { get; set; }
-
+    
     [JsonProperty("date_result")]
     public string DateResult { get; set; }
-
+    
     public override string FormatForPrompt(MainGameLogCollection collection, int index)
     {
         return $"[date at {Location}]\n{DateResult}";
     }
-
+    
     public override bool IsValid() => !string.IsNullOrEmpty(Location);
-
+    
     public override MainGameLog Clone()
     {
         return new DateLog { ElapsedDays = this.ElapsedDays, Location = this.Location, DateResult = this.DateResult };
     }
 }
 
-// 2. Usage (no changes to existing code required)
+// 2. 使用（既存コードの変更不要）
 saveData.AddLogForHeroine(heroine, new DateLog { Location = "Park", DateResult = "Success" });
 
-// 3. Type-specific retrieval is also available
+// 3. 型別取得も可能
 var dateLogs = logCollection.GetLogsByType<DateLog>();
 ```
 
 ---
 
-## How to Add a New AI Client
+## 新しいAIクライアントの追加方法
 
-Thanks to the Provider Pattern, new AI clients can be added **without modifying the plugin core**.
+プロバイダーパターンにより、**プラグイン本体を変更せずに**新しいAIクライアントを追加できます。
 
-### Steps
+### 手順
 
-#### 1. Create Directory
+#### 1. ディレクトリ作成
 ```
 Core/Communication/Clients/OpenAI/
 ├── OpenAIClient.cs
@@ -1003,144 +1005,144 @@ Core/Communication/Clients/OpenAI/
 └── OpenAIClientProvider.cs
 ```
 
-#### 2. Implement Interfaces
+#### 2. インターフェースの実装
 
-Implement `ICommunicationClient`, `IResponseExtractor`, and `IClientProvider` in each file.
+各ファイルで`ICommunicationClient`、`IResponseExtractor`、`IClientProvider`を実装します。
 
-#### 3. Register in ClientRegistry
+#### 3. ClientRegistryへの登録
 
-Just add one line to the static constructor of `ClientRegistry.cs`:
+`ClientRegistry.cs`の静的コンストラクタに1行追加するだけ：
 ```csharp
 static ClientRegistry()
 {
     RegisterProvider(new OllamaClientProvider());
     RegisterProvider(new LMStudioClientProvider());
-    RegisterProvider(new OpenAIClientProvider());  // ← Add this one line
+    RegisterProvider(new OpenAIClientProvider());  // ← この1行を追加
 }
 ```
 
-**The plugin core (`AICharacterBridgePlugin.cs`) requires 0 changes** to make the new client available.
+**プラグイン本体（AICharacterBridgePlugin.cs）は0行変更**で新しいクライアントが使用可能になります。
 
 ---
 
-## How to Add a New Action in the TalkSceneChat Module
+## TalkSceneChatモジュールへの新しいアクション追加方法
 
-Thanks to separation of concerns, adding new actions follows a clear procedure:
+責務分離により、アクション追加が明確な手順で行えます：
 ```csharp
-// 1. Add to ALL_ACTIONS in TalkSceneActionFilter.cs
+// 1. TalkSceneActionFilter.cs の ALL_ACTIONS に追加
 private static readonly List<string> ALL_ACTIONS = new List<string>
 {
     // ...
-    "new_action_name"  // ← Add here
+    "new_action_name"  // ← 追加
 };
 
-// 2. Add to GetActionDisplayText in TalkSceneActionFilter.cs
+// 2. TalkSceneActionFilter.cs の GetActionDisplayText に追加
 public string GetActionDisplayText(string actionName)
 {
     switch (actionName)
     {
-        case "new_action_name": return "New Action Display Text";  // ← Add here
+        case "new_action_name": return "New Action Display Text";  // ← 追加
     }
 }
 
-// 3. Add implementation in TalkSceneActionExecutor.cs
+// 3. TalkSceneActionExecutor.cs に実装追加
 public bool ExecuteAction(string actionName, TalkScene talkScene)
 {
     switch (actionName)
     {
-        case "new_action_name": return ExecuteNewAction(talkScene);  // ← Add here
+        case "new_action_name": return ExecuteNewAction(talkScene);  // ← 追加
     }
 }
 
-private bool ExecuteNewAction(TalkScene talkScene) { /* implementation */ }
+private bool ExecuteNewAction(TalkScene talkScene) { /* 実装 */ }
 ```
 
 ---
 
-## UI Components
+## UI コンポーネント
 
-### CharacterCardEditorUI (Key: "K")
-Unified editing for WorldSetting, Player, and all Heroine CharacterCards.
+### CharacterCardEditorUI ("K"キー)
+WorldSetting、Player、全HeroineのCharacterCardを統合編集。
 
-**Features:**
-- Left panel: Select World / Player / Heroine
-- Right panel: Tab-based editing
-  - **Description / Name / Personality**: Edit basic fields
-  - **Coordinate**: Edit Clothes / Appearance descriptions for each outfit preset (0–6)
-- JSON import/export with file type validation via the `spec` field
-- During TalkScene, the conversation partner is shown at the top of the list
+**機能:**
+- 左パネル: World / Player / Heroine選択
+- 右パネル: タブ切り替え編集
+  - **Description / Name / Personality**: 基本フィールドの編集
+  - **Coordinate**: 衣装プリセット（0〜6）ごとの Clothes / Appearance 説明文を編集
+- JSON形式でのインポート/エクスポート（`spec` フィールドによる種別検証付き）
+- TalkScene中は会話相手を優先表示
 
-**Coordinate Tab Behavior:**
-- Select preset number (0–6) and field (Clothes / Appearance) to edit
-- Editing data is saved as `CoordinateData` inside `CharacterCard`'s `data.extensions`
-- Reflected to save data on pressing the Apply button
+**Coordinate タブの動作:**
+- プリセット番号（0〜6）とフィールド（Clothes / Appearance）を選択して編集
+- 編集データは `CharacterCard` の `data.extensions` 内に `CoordinateData` として保存
+- Apply ボタン押下時にセーブデータへ反映
 
-### TalkSceneUI (Key: "L")
-AI chat during the main game's TalkScene. Implemented as an ImguiWindow.
+### TalkSceneUI ("L"キー)
+メインゲームのTalkScene中にAIとチャット。ImguiWindowベースの実装。
 
-**Features:**
-- **Chat Tab**: Message input, chat execution, special action execution, Resend Last button
-- **Log Tab**: TalkScene history display (per turn), log deletion
-- **Context Tab**: Per-heroine context_note editing (Apply Changes / Reset / Clear)
-- **Prompt Tab**: Prompt template editing and reset
+**機能:**
+- **Chat タブ**: メッセージ入力、チャット実行、特殊アクション実行、Resend Last ボタン
+- **Log タブ**: TalkScene履歴表示（ターン単位）、ログ削除機能
+- **Context タブ**: ヒロインごとの context_note 編集（Apply Changes / Reset / Clear）
+- **Prompt タブ**: プロンプトテンプレート編集、リセット機能
 
-**Impact on Favorability, Intimacy, and Arousal:**
+**好感度・親密度・興奮度への影響:**
 
-Favorability (`favor`) change based on `impression_on_user` value (active when `Enable Favorability Update = true`):
+`impression_on_user` の値に応じた好感度 (`favor`) 変化量（`Enable Favorability Update = true` のとき有効）：
 
-| `impression_on_user` | `favor` Change | Notes |
+| `impression_on_user` | `favor` 変化 | 備考 |
 |---|---|---|
-| `very_bad` | -4 | Minimum 0 |
-| `bad` | -2 | Minimum 0 |
-| `neutral` | No change | |
-| `good` | +4 | If `favor >= 100 && isGirlfriend`, increases `intimacy += 1` instead (max 100) |
-| `very_good` | +6 | If `favor >= 100 && isGirlfriend`, increases `intimacy += 1` instead (max 100) |
+| `very_bad` | -4 | 最低値 0 |
+| `bad` | -2 | 最低値 0 |
+| `neutral` | 変化なし | |
+| `good` | +4 | `favor >= 100 && isGirlfriend` の場合は代わりに `intimacy += 1`（最大値 100） |
+| `very_good` | +6 | `favor >= 100 && isGirlfriend` の場合は代わりに `intimacy += 1`（最大値 100） |
 
-When `is_aroused_by_conversation` is `"yes"` (active when `Enable Arousal Update = true`):
-- `lewdness += 4` (maximum 100)
+`is_aroused_by_conversation` が `"yes"` のとき（`Enable Arousal Update = true` のとき有効）：
+- `lewdness += 4`（最大値 100）
 
-**Architecture:**
-- Implemented as an ImguiWindow
-- Pure presentation layer; control logic is delegated to TalkSceneChatModule
-- Visibility controlled by the `enabled` property
+**アーキテクチャ:**
+- ImguiWindowベースの実装（KKABMX_AdvancedGUIを参考）
+- 純粋な表示層、制御ロジックはTalkSceneChatModuleに委譲
+- `enabled`プロパティで表示制御
 
 ---
 
-## Data Management
+## データ管理
 
-### Where Data Is Stored
+### データの保存場所
 
-| Data | Storage Location | Managing Class |
+| データ | 保存場所 | 管理クラス |
 |--------|----------|-----------|
-| WorldSetting | Game save (core) | GameController |
-| Player CharacterCard | Game save (core · RAW JSON) | GameController |
-| Heroine CharacterCard | Game save (core · RAW JSON) | GameController |
-| CoordinateData | Inside CharacterCard extensions | CharacterCardEditorUI (write) / CharacterCardResolver (read-only) |
-| MainGameLog | Game save (core) | GameController |
-| CustomPromptTemplate | Game save (TalkSceneChat slot) | TalkSceneChatGameController |
-| HeroineChatSettings (context_note, etc.) | Game save (TalkSceneChat slot) | TalkSceneChatGameController |
-| General settings | BepInEx config file | AICharacterBridgePlugin |
-| Client-specific settings | BepInEx config file | Each ClientProvider |
-| Module settings | BepInEx config file | Each module |
+| WorldSetting | ゲームセーブ (コア) | GameController |
+| Player CharacterCard | ゲームセーブ (コア・RAW JSON) | GameController |
+| Heroine CharacterCard | ゲームセーブ (コア・RAW JSON) | GameController |
+| CoordinateData | CharacterCard の extensions 内 | CharacterCardEditorUI（書き込み）/ CharacterCardResolver（読み取りのみ） |
+| MainGameLog | ゲームセーブ (コア) | GameController |
+| CustomPromptTemplate | ゲームセーブ (TalkSceneChat スロット) | TalkSceneChatGameController |
+| HeroineChatSettings (context_note等) | ゲームセーブ (TalkSceneChat スロット) | TalkSceneChatGameController |
+| 一般設定 | BepInEx設定ファイル | AICharacterBridgePlugin |
+| クライアント固有設定 | BepInEx設定ファイル | 各ClientProvider |
+| モジュール設定 | BepInEx設定ファイル | 各モジュール |
 
-### AICharacterBridgeSaveData (Core Save Data)
+### AICharacterBridgeSaveData（コアセーブデータ）
 
-Core data saved in the game save. Does not include TalkSceneChat-specific data.
+ゲームセーブに保存されるコアデータ。TalkSceneChat固有データは含まない。
 ```csharp
 public class AICharacterBridgeSaveData
 {
     [JsonProperty("version")]
     public string Version { get; set; }  // "2.0"
-
+    
     [JsonProperty("player_character_card_json")]
     public string PlayerCharacterCardJson { get; set; }
-
+    
     [JsonProperty("world_setting")]
     public WorldSetting WorldSetting { get; set; }
-
+    
     [JsonProperty("heroine_data_list")]
     public List<HeroineGameData> HeroineDataList { get; set; }
-
+    
     public CharacterCard GetPlayerCharacterCard();
     public void SetPlayerCharacterCard(CharacterCard card);
     public CharacterCard GetCharacterCardForHeroine(SaveData.Heroine heroine);
@@ -1152,7 +1154,7 @@ public class AICharacterBridgeSaveData
 
 ---
 
-## Configuration
+## 設定
 
 ### BepInEx Config
 ```ini
@@ -1182,114 +1184,114 @@ Enable Favorability Update = true
 Enable Arousal Update = true
 ```
 
-**LLM Options Format:**
-- Written in JSON format. The enclosing `{}` are not required.
-- Example (Ollama):
+**LLM Options の記述形式:**
+- JSON形式で記述します。オブジェクト全体を囲む `{}` は不要です。
+- 例（Ollama）:
   ```
   "top_k": 40,
   "top_p": 0.9,
   "temperature": 0.8
   ```
-- Example (LM Studio):
+- 例（LM Studio）:
   ```
   "temperature": 0.8,
   "top_p": 0.9,
   "max_output_tokens": 500
   ```
 
-**About Ollama's Think Option:**
-- `Default`: Does not include the `think` field in the request.
-- `True`: Adds `"think": true` as a top-level field in the request.
-- `False`: Adds `"think": false` as a top-level field in the request.
-- Used with models that support extended thinking, such as QwQ and DeepSeek-R1.
-- `think` is added as a top-level request field, not inside the `options` object.
+**Ollama の Think Option について:**
+- `Default`: リクエストに `think` フィールドを含めません。
+- `True`: リクエストのトップレベルに `"think": true` を追加します。
+- `False`: リクエストのトップレベルに `"think": false` を追加します。
+- QwQ や DeepSeek-R1 など、思考（Thinking）機能をサポートするモデルで使用します。
+- `think` は `options` オブジェクト内ではなくリクエストのトップレベルフィールドとして付与されます。
 
-**Note on LM Studio LLM Options:**
-- Use `max_output_tokens` (not `max_tokens`) for the token limit.
-
----
-
-## How to Use
-
-### 1. Setting Up CharacterCard & World Info
-1. Press the **"K" key** during the main game
-2. Select the target from the left panel (World / Player / Heroine)
-3. Enter information using the tabs (Description / Name / Personality)
-4. Press **Apply** to save, then save the game to persist
-
-### 2. Setting Per-Outfit-Preset Descriptions
-1. Press **"K"** → select the target Player or Heroine
-2. Open the **Coordinate** tab
-3. Select the preset number (0–6) and field (Clothes / Appearance) and enter descriptions
-4. Press **Apply** to save
-5. By writing `{{clothes}}` / `{{appearance}}` in CharacterCard fields, they will be automatically substituted during prompt generation
-
-### 3. Chatting with AI
-1. Press the **"L" key** during a TalkScene (the session starts automatically)
-2. If needed, open the **Context tab**, enter a context_note, and press **Apply Changes** to confirm
-3. In the **Chat tab**, type a message and click the **Talk** button
-4. The AI's response is automatically recorded as a turn
-5. If a special action is suggested, click the green button to execute it
-6. When the TalkScene ends, logs are automatically saved and the UI closes automatically
-
-### 4. Checking Logs
-1. Open the **Log tab** of TalkSceneUI
-2. View past TalkScene logs and the current session log
-3. Use **Delete All Logs** to clear logs if needed
-
-### 5. JSON Export/Import
-- **Save JSON**: Exports in the format matching the current selection type
-  - With World selected: exports in `WorldSetting` format (`spec: "world_setting"`)
-  - With Player/Heroine selected: exports in Character Card V2/V3 format
-- **Load JSON**: Validates file type via the `spec` field before importing
-  - With World selected: only accepts files with `spec = "world_setting"`
-  - With Character selected: only accepts files with `spec = "chara_card_v2"` / `"chara_card_v3"`
-  - Load is rejected on type mismatch and the currently edited data is not changed
+**LM Studio の LLM Options に関する注意:**
+- トークン上限は `max_tokens` ではなく `max_output_tokens` を使用してください。
 
 ---
 
-## CharacterCard Spec Support
+## 使用方法
 
-### Supported Versions
-- **Character Card V2**: Full support
-- **Character Card V3**: Full support
+### 1. CharacterCard & World Info の設定
+1. メインゲーム中に **"K"キー** を押す
+2. 左側のリストから編集対象を選択 (World / Player / Heroine)
+3. タブで情報を入力 (Description / Name / Personality)
+4. **Apply** ボタンで保存、ゲームをセーブして永続化
 
-### Default on New Creation
-- When creating new cards from within the plugin, **V2 format** is used
+### 2. 衣装プリセットごとの説明文設定
+1. **"K"キー** → 対象の Player または Heroine を選択
+2. **Coordinate** タブを開く
+3. プリセット番号（0〜6）と項目（Clothes / Appearance）を選択して説明文を入力
+4. **Apply** ボタンで保存
+5. CharacterCard の各フィールドに `{{clothes}}` / `{{appearance}}` を記述しておくと、プロンプト生成時に自動置換される
 
-### Data Integrity Guarantee
-- Information in the input JSON file will not be lost through editing → saving → export
-- Fields not used by the plugin (`mes_example`, `first_mes`, `scenario`, etc.) are fully retained as `RawJson`
-- No conversion between V2 and V3 is performed; the original version is preserved
+### 3. AI とのチャット
+1. TalkScene で **"L"キー** を押す（セッションは自動開始済み）
+2. 必要に応じて **Context タブ** で context_note を入力し **Apply Changes** で確定する
+3. **Chat タブ**でメッセージを入力し **Talk** ボタンをクリック
+4. AIの応答が1ターンとして自動的に記録される
+5. 特殊アクションが提案された場合、緑色のボタンをクリックして実行
+6. TalkScene終了時、ログは自動保存され、UIは自動的に閉じる
 
----
+### 4. ログの確認
+1. TalkSceneUI の **Log タブ** を開く
+2. 過去のTalkSceneログと現在のセッションログを確認
+3. 必要に応じて **Delete All Logs** でログをクリア
 
-## Design Principles
-
-1. **Single Responsibility Principle**: Each class has a clear, well-defined responsibility
-2. **Data Integrity**: Retaining CharacterCard RAW JSON prevents information loss
-3. **Extensibility**: New log types and AI clients can be added without modifying existing code
-4. **Type Safety**: Log types are managed by the type system rather than an enum
-5. **Cohesion**: Related data (CharacterCard and logs) are managed together
-6. **Reusability**: Data classes themselves carry formatting functionality
-7. **Maintainability**: Clear separation between domain logic and general-purpose processing
-8. **Optimization**: Reduced redundancy for lower-performance LLMs (context-dependent log omission)
-9. **Module Independence**: Each feature is an independent module; easy to add or remove
-10. **Provider Pattern**: Full externalization and self-management of the AI communication layer
-11. **Game Independence**: The Core layer does not depend on game-specific APIs, maintaining generality
-12. **Separation of Concerns**: Clear separation between control layer (Module) and presentation layer (UI)
-13. **Layered Data Access**: Clear separation of formatting, state retrieval, data retrieval, and placeholder resolution
-14. **Automatic Lifecycle Management**: Sessions are fully synchronized with TalkScene, eliminating manual management
-15. **Single Source of Truth**: Data truth is centralized in one place
-16. **Structured Conversation Management**: Data is managed per turn, making the flow of conversation explicit
-17. **Logic Consolidation**: Log formatting logic centralized via TalkSceneLogFormatter
-18. **Non-Destructive Placeholder Resolution**: CharacterCardResolver performs replacement on a clone, protecting original data
-19. **Guaranteed Ordered Replacement**: Replacement is guaranteed to execute in the index order of the ReplaceEntry list
-20. **Self-Contained Module Save**: Each module has a dedicated GameCustomFunctionController and does not depend on core save data
-21. **Template and Builder Responsibility Separation**: Prompt templates contain only placeholders; tag structures are added by the Builder. This keeps template descriptions clean while allowing tag changes to be managed centrally in code
+### 5. JSON エクスポート/インポート
+- **Save JSON**: 選択中の種別に応じた形式でエクスポート
+  - World 選択中: `WorldSetting` 形式（`spec: "world_setting"`）でエクスポート
+  - Player / Heroine 選択中: Character Card V2/V3形式でエクスポート
+- **Load JSON**: `spec` フィールドで種別を検証してからインポート
+  - World 選択中は `spec = "world_setting"` のファイルのみ受け付ける
+  - Character 選択中は `spec = "chara_card_v2"` / `"chara_card_v3"` のファイルのみ受け付ける
+  - 種別不一致の場合はロードを拒否し、編集中のデータは変更されない
 
 ---
 
-**Document Version**: 34.0  
-**Supported Plugin Version**: AI Character Bridge v0.0.1  
-**Last Updated**: June 2026
+## CharacterCard 規格対応
+
+### サポートバージョン
+- **Character Card V2**: 完全サポート
+- **Character Card V3**: 完全サポート
+
+### 新規作成時のデフォルト
+- プラグインから新規作成する場合、**V2形式**で作成
+
+### データの完全性保証
+- 入力したJSONファイルの情報は、編集→保存→出力を経ても欠落しない
+- プラグインで使用しないフィールド（`mes_example`、`first_mes`、`scenario` 等）も`RawJson`として完全保持
+- V2とV3の相互変換は行わず、元のバージョンを維持
+
+---
+
+## 設計原則
+
+1. **単一責任の原則**: 各クラスは明確な責任を持つ
+2. **データの完全性**: CharacterCardのRAW JSON保持により情報欠落を防止
+3. **拡張性**: 新しいログタイプやAIクライアントを既存コード変更なしで追加可能
+4. **型安全性**: enumではなく型システムでログタイプを管理
+5. **凝集性**: 関連データ（CharacterCardとログ）を統合管理
+6. **再利用性**: データクラス自身がフォーマット機能を持つ
+7. **保守性**: ドメインロジックと汎用処理の明確な分離
+8. **最適化**: 低性能LLM向けの冗長性削減（情報の文脈依存省略）
+9. **モジュール独立性**: 各機能をモジュールとして独立させ、追加・削除を容易に
+10. **プロバイダーパターン**: AI通信層の完全な外部化と自己管理
+11. **ゲーム非依存性**: Core部分はゲーム固有APIに依存せず、汎用性を維持
+12. **責務分離**: 制御層（Module）と表示層（UI）の明確な分離
+13. **データアクセスの階層化**: フォーマット・状態取得・データ取得・プレースホルダー解決を明確に分離
+14. **自動ライフサイクル管理**: セッションをTalkSceneと完全連動させ、手動管理を排除
+15. **Single Source of Truth**: データの真実の源泉を一箇所に集約
+16. **構造化された会話管理**: ターン単位でデータを管理し、会話の流れを明確化
+17. **ロジックの集約**: TalkSceneLogFormatterによるログフォーマットロジックの一元化
+18. **非破壊的プレースホルダー解決**: CharacterCardResolverはクローン上で置換を行い、元データを保護
+19. **順序制御を保証した置換**: ReplaceEntryリストのインデックス順で置換が実行されることを保証
+20. **モジュール自己完結セーブ**: 各モジュールは専用の GameCustomFunctionController を持ち、コアセーブデータに依存しない
+21. **テンプレートとBuilderの責務分離**: プロンプトテンプレートはプレースホルダーのみを記述し、タグ構造はBuilder側で付与する。テンプレートの記述をスッキリ保ちつつ、タグの変更をコード側で一元管理できる
+
+---
+
+**ドキュメントバージョン**: 35.0  
+**対応プラグインバージョン**: AI Character Bridge v0.0.1  
+**最終更新**: 2026年7月
