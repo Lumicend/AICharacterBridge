@@ -110,7 +110,7 @@ Once you're back home, press **"K"** (default key setting) to open the Character
 The window is laid out as follows:
 
 - **Left panel**: Selection of the editing target (World / Player / heroine roster)
-- **Right panel**: Editing of the selected target's various data (Description / Name / Personality / Message Example / Coordinate)
+- **Right panel**: Editing of the selected target's various data (Description / Name / Personality / Coordinate)
 
 ---
 
