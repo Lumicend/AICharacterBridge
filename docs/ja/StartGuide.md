@@ -110,7 +110,7 @@
 ウィンドウの構成は以下のとおりです。
 
 - **左パネル**：編集対象の選択（World / Player / ヒロイン名簿）
-- **右パネル**：選択した対象の各種データ編集（Description / Name / Personality / Message Example / Coordinate）
+- **右パネル**：選択した対象の各種データ編集（Description / Name / Personality / Coordinate）
 
 ---
 
