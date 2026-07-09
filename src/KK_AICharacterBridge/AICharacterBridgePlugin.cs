@@ -25,7 +25,7 @@ namespace AICharacterBridge
     {
         public const string GUID = "com.lumicend.aicharacterbridge.kk";
         public const string PluginName = "AI Character Bridge";
-        public const string Version = "0.0.1";
+        public const string Version = "0.0.2";
 
         // ===================================================================
         // AI Character Card extensions の名前空間・キー定数
