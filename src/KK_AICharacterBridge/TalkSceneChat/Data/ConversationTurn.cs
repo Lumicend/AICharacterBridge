@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Newtonsoft.Json;
 
 namespace AICharacterBridge.TalkSceneChat.Data
 {
     /// <summary>
-    /// AIとの1回の通信における会話のやり取り（ターン）を表すクラス。
+    /// AIとの1回の通信における会話のやり取り(ターン)を表すクラス。
     /// ユーザーの発言とAIの応答をひとまとめにして管理します。
     /// Represents a single conversation turn (one communication with AI).
     /// Groups user messages and AI responses together.
@@ -73,50 +72,6 @@ namespace AICharacterBridge.TalkSceneChat.Data
             }
 
             return clone;
-        }
-
-        /// <summary>
-        /// このターンを読みやすい形式でフォーマットします。
-        /// Formats this turn in a readable format.
-        /// </summary>
-        /// <returns>フォーマットされた文字列</returns>
-        public string FormatForDisplay()
-        {
-            var sb = new StringBuilder();
-
-            if (Entries == null || Entries.Count == 0)
-            {
-                sb.AppendLine("(Empty turn)");
-                return sb.ToString();
-            }
-
-            foreach (var entry in Entries)
-            {
-                if (entry is ChatEntry chatEntry)
-                {
-                    if (chatEntry.Speaker == "user")
-                    {
-                        sb.AppendLine($"User: {chatEntry.Content}");
-                    }
-                    else if (chatEntry.Speaker == "character")
-                    {
-                        if (chatEntry.Type == "dialogue")
-                        {
-                            sb.AppendLine($"Character: {chatEntry.Content}");
-                        }
-                        else if (chatEntry.Type == "observation")
-                        {
-                            sb.AppendLine($"(Observation: {chatEntry.Content})");
-                        }
-                    }
-                }
-                else if (entry is ActionEntry actionEntry)
-                {
-                    sb.AppendLine($"[Action: {actionEntry.Action}]");
-                }
-            }
-
-            return sb.ToString();
         }
     }
 }

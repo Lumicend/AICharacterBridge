@@ -75,7 +75,7 @@ namespace AICharacterBridge.TalkSceneChat
                 if (userCard == null || characterCard == null)
                     return null;
 
-                // 2. 会話ログのフォーマット（TalkSceneLogFormatter を使用）
+                // 2. 会話ログのフォーマット(TalkSceneLogFormatter を使用)
                 // Format chat log (using TalkSceneLogFormatter)
                 string chatLog = TalkSceneLogFormatter.FormatLogs(heroine, _sessionManager);
 
@@ -123,13 +123,13 @@ namespace AICharacterBridge.TalkSceneChat
         /// 置換方式の方針 / Replacement method policy:
         ///   Plain:
         ///     プレースホルダーがテキスト中にインラインで使用される場合、または
-        ///     テンプレートに囲みタグを直書きしているもの（例: name タグ内の user_name）。
+        ///     テンプレートに囲みタグを直書きしているもの(例: name タグ内の user_name)。
         ///     Used for inline placeholders; also for fields whose enclosing tags
         ///     are written directly in the template (e.g., user_name inside a name tag).
         ///
         ///   Tagged block:
         ///     テンプレートでは {{key}} のみ記述し、タグを Builder 側で付与する場合。
-        ///     値が空のとき行ごと削除される（world_setting, context_note 等と同様）。
+        ///     値が空のとき行ごと削除される(world_setting, context_note 等と同様)。
         ///     Used when the template has only {{key}} and the Builder adds surrounding tags.
         ///     An empty value removes the placeholder line entirely.
         ///
@@ -241,14 +241,20 @@ namespace AICharacterBridge.TalkSceneChat
                 // =====================================================================
 
                 // Tagged block + note -> <user_turn note="...">
+                // note の文言は、テンプレート内に固定文として配置された
+                // <narration_format> ブロックの説明を前提とするため、
+                // ここでは重複を避け簡潔な記述に留める。
+                // The note text assumes the explanation already given by the
+                // fixed <narration_format> block placed in the template, so
+                // it is kept brief here to avoid duplication.
                 ReplaceEntry.Tagged(
                     "user_message",
                     userMessage ?? "",
                     "user_turn",
-                    "This input contains the user's spoken words and/or physical actions."),
+                    "The user's current turn, written in the narration format described above."),
 
                 // =====================================================================
-                // 利用可能なオプション（JSON 配列形式）/ Available options (JSON array format)
+                // 利用可能なオプション(JSON 配列形式)/ Available options (JSON array format)
                 // =====================================================================
 
                 // Tagged block -> <available_expressions>
@@ -258,7 +264,7 @@ namespace AICharacterBridge.TalkSceneChat
                     "available_expressions"),
 
                 // Tagged block -> <available_poses>
-                // キー名（available_chara_motions）とタグ名（available_poses）が異なる点に注意
+                // キー名(available_chara_motions)とタグ名(available_poses)が異なる点に注意
                 // Note: key name (available_chara_motions) intentionally differs from tag name (available_poses)
                 ReplaceEntry.Tagged(
                     "available_chara_motions",
@@ -266,7 +272,7 @@ namespace AICharacterBridge.TalkSceneChat
                     "available_poses"),
 
                 // Tagged block -> <available_impressions_on_user>
-                // キー名（available_impressions）とタグ名（available_impressions_on_user）が異なる点に注意
+                // キー名(available_impressions)とタグ名(available_impressions_on_user)が異なる点に注意
                 // Note: key name intentionally differs from tag name
                 ReplaceEntry.Tagged(
                     "available_impressions",
@@ -277,7 +283,7 @@ namespace AICharacterBridge.TalkSceneChat
                     "available_impressions_on_user"),
 
                 // Tagged block -> <available_post_conversation_actions>
-                // キー名（available_post_actions）とタグ名（available_post_conversation_actions）が異なる点に注意
+                // キー名(available_post_actions)とタグ名(available_post_conversation_actions)が異なる点に注意
                 // Note: key name intentionally differs from tag name
                 ReplaceEntry.Tagged(
                     "available_post_actions",
@@ -285,7 +291,7 @@ namespace AICharacterBridge.TalkSceneChat
                     "available_post_conversation_actions"),
 
                 // =====================================================================
-                // 互換性のための変数（{{user}}, {{char}} 形式）
+                // 互換性のための変数({{user}}, {{char}} 形式)
                 // Compatibility variables ({{user}}, {{char}} format)
                 // =====================================================================
 

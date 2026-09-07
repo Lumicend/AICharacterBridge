@@ -37,6 +37,27 @@ namespace AICharacterBridge.TalkSceneChat
     ///   using Tagged with tagName="user_name" would produce user_name tags
     ///   which are misrendered in some display tools.
     ///   Instead, the enclosing name tag is written directly in the template.
+    ///
+    /// 記述フォーマット(統一記法)について / About the unified narration format:
+    ///   {{chat_log}} の直前に配置された "narration_format" ブロックは、
+    ///   プレースホルダーを含まない固定文であり、TalkScenePromptBuilder による
+    ///   置換の対象ではない。この固定文は、{{chat_log}}(過去ログ)と
+    ///   {{user_message}}(ユーザーの今回の発言)の両方に共通して適用される
+    ///   記法("..." / *...*)をAIに説明するためのものである。
+    ///   ユーザー発言は UserMessageFormatter によって送信時点でこの記法へ
+    ///   正規化済みであり、過去のキャラクター発言も TalkSceneLog によって
+    ///   同じ記法で整形されるため、双方を読み解く際の共通ルールとして
+    ///   1箇所にまとめて記載している。
+    ///
+    ///   The "narration_format" block placed immediately before {{chat_log}}
+    ///   is a fixed block of text containing no placeholders, and is not a
+    ///   target of replacement by TalkScenePromptBuilder. It explains to the
+    ///   AI the notation ("..."/*...*) that applies to both {{chat_log}}
+    ///   (past history) and {{user_message}} (the user's current turn).
+    ///   User utterances are normalized into this notation at send time by
+    ///   UserMessageFormatter, and past character utterances are formatted
+    ///   into the same notation by TalkSceneLog, so the shared rule for
+    ///   interpreting both is documented once, in a single place.
     /// </summary>
     public static class TalkSceneDefaultTemplate
     {
@@ -75,6 +96,13 @@ Your task is to respond to the input enclosed in the ""user_turn"" tags below. U
 {{context_note}}
 </current_context>
 
+<narration_format note=""Applies to both the conversation history below and the user's current turn."">
+Spoken words are written as plain text, or wrapped in ""double quotes"".
+Actions, scenery, and emotional descriptions are wrapped in *asterisks*.
+A single message may freely mix both, in any order. For example:
+*stands up straight* ""Let's go."" *smiles softly*
+</narration_format>
+
 {{chat_log}}
 
 {{user_message}}
@@ -108,6 +136,8 @@ Your task is to respond to the input enclosed in the ""user_turn"" tags below. U
 
 6. You MUST choose exactly one value for ""post_conversation_action"" from the Available Post-Conversation Actions.
    - post_conversation_action: The action {{char_name}} will take after this conversation ends.
+
+7. Do NOT wrap ""content"" in quotation marks or asterisks. The ""type"" key already indicates whether a segment is dialogue or an observation, so the notation described above is not needed inside ""content"".
 </response_rules>
 
 <output_format>

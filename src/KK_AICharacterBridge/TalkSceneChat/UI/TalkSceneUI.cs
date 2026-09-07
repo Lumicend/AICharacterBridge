@@ -420,7 +420,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
         #region Public API
 
         /// <summary>
-        /// プロンプトテンプレートを設定します（TalkSceneChatModuleから呼ばれる）。
+        /// プロンプトテンプレートを設定します(TalkSceneChatModuleから呼ばれる)。
         /// Sets the prompt template (called from TalkSceneChatModule).
         /// </summary>
         public void SetPromptTemplate(string template)
@@ -429,7 +429,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
         }
 
         /// <summary>
-        /// context_note の初期値を設定します（TalkSceneChatModuleから呼ばれる）。
+        /// context_note の初期値を設定します(TalkSceneChatModuleから呼ばれる)。
         /// Sets the initial value of context_note (called from TalkSceneChatModule).
         /// </summary>
         /// <param name="note">設定する context_note / context_note to set</param>
@@ -485,7 +485,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
         }
 
         /// <summary>
-        /// 現在の設定（プロンプトテンプレートおよびcontext_note）をTalkSceneChatSaveDataに保存します。
+        /// 現在の設定(プロンプトテンプレートおよびcontext_note)をTalkSceneChatSaveDataに保存します。
         /// Saves current settings (prompt template and context_note) to TalkSceneChatSaveData.
         /// </summary>
         private void SaveCurrentSettings()
@@ -545,6 +545,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
             Exception caughtError = null;
             string extractedMessage = null;
             string prompt = null;
+            string normalizedUserMessage = null;
             List<ExpressionData> expressions = null;
             List<CharaMotionData> charaMotions = null;
             TalkSceneResponse response = null;
@@ -561,6 +562,12 @@ namespace AICharacterBridge.TalkSceneChat.UI
                     LogWarning("Session not active. This should not happen.");
                 }
 
+                // ユーザーメッセージを正規化する(セリフ/動作描写の統一記法へ変換)。
+                // 以降、プロンプト構築とログ保存の両方でこの正規化済み文字列を使い回す。
+                // Normalize the user message (converted into the unified speech/narration format).
+                // The normalized string is reused for both prompt construction and log saving.
+                normalizedUserMessage = UserMessageFormatter.Normalize(_userMessage);
+
                 // コアセーブデータから WorldSetting を取得
                 // Retrieve WorldSetting from core save data
                 var coreData = GameController.CurrentSaveData;
@@ -568,7 +575,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
 
                 prompt = _promptBuilder.BuildPrompt(
                     _promptTemplate,
-                    _userMessage,
+                    normalizedUserMessage,
                     worldSetting,
                     heroine,
                     expressions,
@@ -640,7 +647,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
                 string userName = userCard?.GetName() ?? "User";
                 string heroineName = heroineCard?.GetName() ?? heroine.charFile?.parameter?.fullname ?? "Character";
 
-                turn.AddEntry(new ChatEntry("user", userName, "message", _userMessage));
+                turn.AddEntry(new ChatEntry("user", userName, "message", normalizedUserMessage));
 
                 foreach (var segment in response.ConversationSegments)
                 {
@@ -669,7 +676,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
 
             enabled = true;
 
-            // フェーズ5: 最終処理（アクション処理・好感度更新・性的興奮度更新）
+            // フェーズ5: 最終処理(アクション処理・好感度更新・性的興奮度更新)
             // Phase 5: Post-processing (action queuing, favorability/arousal updates)
             _userMessage = "";
 
@@ -685,14 +692,14 @@ namespace AICharacterBridge.TalkSceneChat.UI
                     _pendingAction = "";
                 }
 
-                // 好感度の更新（コンフィグで有効な場合のみ実行）
+                // 好感度の更新(コンフィグで有効な場合のみ実行)
                 // Update favorability only when enabled in config
                 if (TalkSceneChatModule.EnableFavorabilityUpdate.Value)
                 {
                     UpdateFavorability(response.ImpressionOnUser);
                 }
 
-                // 性的興奮度の更新（コンフィグで有効な場合のみ実行）
+                // 性的興奮度の更新(コンフィグで有効な場合のみ実行)
                 // Update arousal only when enabled in config
                 if (TalkSceneChatModule.EnableArousalUpdate.Value)
                 {
@@ -835,7 +842,7 @@ namespace AICharacterBridge.TalkSceneChat.UI
         }
 
         /// <summary>
-        /// プロンプトテンプレートをデフォルトにリセットします（編集用テキストのみ）。
+        /// プロンプトテンプレートをデフォルトにリセットします(編集用テキストのみ)。
         /// セーブデータへの反映は ApplyPromptTemplate() で行います。
         /// Resets the prompt template to default (editing text only).
         /// Reflecting the change to save data is done via ApplyPromptTemplate().

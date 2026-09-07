@@ -118,6 +118,7 @@
     <Compile Include="TalkSceneChat\TalkScenePromptBuilder.cs" />
     <Compile Include="TalkSceneChat\TalkSceneSessionManager.cs" />
     <Compile Include="TalkSceneChat\UI\TalkSceneUI.cs" />
+    <Compile Include="TalkSceneChat\UserMessageFormatter.cs" />
     <Compile Include="UI\CharacterCardEditorUI.cs" />
   </ItemGroup>
   <ItemGroup />

@@ -7,7 +7,7 @@ using AICharacterBridge.Data;
 namespace AICharacterBridge.TalkSceneChat.Data
 {
     /// <summary>
-    /// 1回のTalkSceneでの完全な会話のやり取り（ユーザーの発言、AIの応答、アクション実行など）を記録するログデータクラス。
+    /// 1回のTalkSceneでの完全な会話のやり取り(ユーザーの発言、AIの応答、アクション実行など)を記録するログデータクラス。
     /// A log data class recording a complete chat session in a single TalkScene.
     /// </summary>
     [Serializable]
@@ -67,7 +67,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
         public int TurnCount => ConversationTurns?.Count ?? 0;
 
         /// <summary>
-        /// すべてのエントリーをフラット化して取得します（内部処理用）。
+        /// すべてのエントリーをフラット化して取得します(内部処理用)。
         /// Gets all entries in a flattened list (for internal processing).
         /// </summary>
         private List<ConversationEntry> GetAllEntries()
@@ -117,7 +117,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
         {
             var sb = new StringBuilder();
 
-            // 前のログを取得（同じ日の場合のみ）
+            // 前のログを取得(同じ日の場合のみ)
             TalkSceneLog previousLog = null;
             if (index > 0)
             {
@@ -169,7 +169,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
                 sb.AppendLine("[Shortly after]");
             }
 
-            // エントリーのフォーマット（フラット化して処理）
+            // エントリーのフォーマット(フラット化して処理)
             var allEntries = GetAllEntries();
             foreach (var entry in allEntries)
             {
@@ -185,7 +185,24 @@ namespace AICharacterBridge.TalkSceneChat.Data
 
         /// <summary>
         /// 単一のエントリーをフォーマットします。
+        ///
+        /// 記述フォーマット(統一記法)に基づく整形ルール:
+        ///   ユーザー発言          : そのまま出力する(UserMessageFormatter により
+        ///                           送信時点で既に "..." / *...* 形式へ正規化済みのため、
+        ///                           ここで追加の引用符付与は行わない)
+        ///   キャラクターのセリフ  : "..." で囲む(AIのJSON出力の content 自体は
+        ///                           無印テキストのため、ここでプラグイン側が付与する)
+        ///   キャラクターの描写    : *...* で囲む
+        ///
         /// Formats a single entry.
+        ///
+        /// Formatting rules based on the unified narration format:
+        ///   User utterance      : output as-is (already normalized into the
+        ///                         "..."/*...* format at send time by
+        ///                         UserMessageFormatter; no additional quoting here)
+        ///   Character dialogue  : wrapped in "..." (the AI's JSON "content" field
+        ///                         itself is plain text, so the plugin adds quotes)
+        ///   Character observation: wrapped in *...*
         /// </summary>
         private string FormatEntry(ConversationEntry entry)
         {
@@ -193,7 +210,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
             {
                 if (chatEntry.Speaker == "user")
                 {
-                    return $"{chatEntry.CharacterName}: \"{chatEntry.Content}\"";
+                    return $"{chatEntry.CharacterName}: {chatEntry.Content}";
                 }
                 else if (chatEntry.Speaker == "character")
                 {
@@ -203,7 +220,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
                     }
                     else if (chatEntry.Type == "observation")
                     {
-                        return $"{chatEntry.CharacterName}: ({chatEntry.Content})";
+                        return $"{chatEntry.CharacterName}: *{chatEntry.Content}*";
                     }
                 }
             }
@@ -285,7 +302,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
             var currentWeek = GameStateProvider.GetCurrentWeek();
             var currentTimePeriod = GameStateProvider.GetCurrentTimePeriod();
             var currentLocation = GameStateProvider.GetCurrentLocation();
-            // 周辺情報を常に出力（省略なし）
+            // 周辺情報を常に出力(省略なし)
             var headerParts = new List<string>();
 
             if (!string.IsNullOrEmpty(currentTimePeriod))
@@ -308,7 +325,7 @@ namespace AICharacterBridge.TalkSceneChat.Data
             }
             else
             {
-                // エントリーのフォーマット（フラット化して処理）
+                // エントリーのフォーマット(フラット化して処理)
                 var allEntries = GetAllEntries();
                 foreach (var entry in allEntries)
                 {
