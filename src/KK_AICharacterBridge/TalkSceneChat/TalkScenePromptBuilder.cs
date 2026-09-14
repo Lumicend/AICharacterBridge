@@ -37,7 +37,7 @@ namespace AICharacterBridge.TalkSceneChat
         /// Builds a prompt.
         /// </summary>
         /// <param name="template">プロンプトテンプレート / Prompt template</param>
-        /// <param name="userMessage">ユーザーメッセージ / User message</param>
+        /// <param name="userMessage">ユーザーメッセージ(未確定・今回の発言) / User message (not yet committed, the current turn)</param>
         /// <param name="worldSetting">世界設定情報 / World setting</param>
         /// <param name="heroine">対象のヒロイン / Target heroine</param>
         /// <param name="expressions">利用可能な表情リスト / Available expressions</param>
@@ -75,30 +75,34 @@ namespace AICharacterBridge.TalkSceneChat
                 if (userCard == null || characterCard == null)
                     return null;
 
-                // 2. 会話ログのフォーマット(TalkSceneLogFormatter を使用)
-                // Format chat log (using TalkSceneLogFormatter)
-                string chatLog = TalkSceneLogFormatter.FormatLogs(heroine, _sessionManager);
+                // 2. 過去セッションのログのフォーマット(TalkSceneLogFormatter を使用)
+                // Format past-session logs (using TalkSceneLogFormatter)
+                string chatLog = TalkSceneLogFormatter.FormatPastLogs(heroine);
 
-                // 3. 利用可能なアクションの取得
+                // 3. 進行中セッション + 未送信のユーザー発言の統合フォーマット(TalkSceneLogFormatter を使用)
+                // context_note(ooc_note)の取得・埋め込みもこの呼び出しの中で行われる。
+                // Format the in-progress session combined with the not-yet-committed
+                // user message (using TalkSceneLogFormatter).
+                // Retrieval and embedding of context_note (ooc_note) also happens
+                // inside this call.
+                string conversationText = TalkSceneLogFormatter.FormatCurrentConversation(
+                    heroine,
+                    _sessionManager,
+                    userMessage,
+                    userCard.GetName());
+
+                // 4. 利用可能なアクションの取得
                 // Get available actions
                 var availableActions = _actionFilter.GetAvailableActions(heroine);
-
-                // 4. context_note の取得
-                // TalkSceneChat 専用セーブデータからヒロインの context_note を取得する。
-                // Retrieve context_note for the heroine from TalkSceneChat save data.
-                // タグ付き置換を使用し、空の場合はプレースホルダーを行ごと削除する。
-                // Uses tagged replacement; removes the placeholder line if empty.
-                string contextNote = TalkSceneChatGameController.CurrentSaveData?.GetContextNote(heroine) ?? "";
 
                 // 5. 置換エントリーの構築
                 // Build replacement entries
                 var entries = BuildReplaceEntries(
-                    userMessage,
                     worldSetting,
                     userCard,
                     characterCard,
                     chatLog,
-                    contextNote,
+                    conversationText,
                     expressions,
                     charaMotions,
                     availableActions);
@@ -129,7 +133,7 @@ namespace AICharacterBridge.TalkSceneChat
         ///
         ///   Tagged block:
         ///     テンプレートでは {{key}} のみ記述し、タグを Builder 側で付与する場合。
-        ///     値が空のとき行ごと削除される(world_setting, context_note 等と同様)。
+        ///     値が空のとき行ごと削除される(world_setting 等と同様)。
         ///     Used when the template has only {{key}} and the Builder adds surrounding tags.
         ///     An empty value removes the placeholder line entirely.
         ///
@@ -141,12 +145,11 @@ namespace AICharacterBridge.TalkSceneChat
         /// The list order determines replacement priority.
         /// </summary>
         private List<ReplaceEntry> BuildReplaceEntries(
-            string userMessage,
             WorldSetting worldSetting,
             CharacterCard userCard,
             CharacterCard characterCard,
             string chatLog,
-            string contextNote,
+            string conversationText,
             List<ExpressionData> expressions,
             List<CharaMotionData> charaMotions,
             List<string> availableActions)
@@ -206,52 +209,36 @@ namespace AICharacterBridge.TalkSceneChat
                 ReplaceEntry.Tagged("char_personality", characterCard.GetPersonality() ?? "", "personality"),
 
                 // =====================================================================
-                // 現在の状況 / Current situation
-                // =====================================================================
-
-                // Plain: time タグ内にインラインで埋め込まれる
-                // Plain: embedded inline inside the time tag
-                ReplaceEntry.Plain("time_period", GameDataFormatter.FormatTimePeriod(GameStateProvider.GetCurrentTimePeriod())),
-
-                // Plain: time タグ内にインラインで埋め込まれる
-                // Plain: embedded inline inside the time tag
-                ReplaceEntry.Plain("week", GameDataFormatter.FormatWeek(GameStateProvider.GetCurrentWeek())),
-
-                // Plain: location タグ内にインラインで埋め込まれる
-                // Plain: embedded inline inside the location tag
-                ReplaceEntry.Plain("location", GameDataFormatter.FormatLocation(GameStateProvider.GetCurrentLocation())),
-
-                // Plain: location タグ内にインラインで埋め込まれる
-                // Plain: embedded inline inside the location tag
-                ReplaceEntry.Plain("school_name", GameStateProvider.GetSchoolName()),
-
-                // Tagged block: 記述がない場合はプレースホルダー行ごと削除
-                // Tagged block: removed entirely if not set
-                ReplaceEntry.Tagged("context_note", contextNote, "context_note"),
-
-                // =====================================================================
-                // 会話履歴 / Conversation history
+                // 会話履歴(過去セッション)/ Conversation history (past sessions)
                 // =====================================================================
 
                 // Tagged block -> <conversation_history>
+                // 過去の(確定済み・保存済みの)TalkSceneセッションのみを含む。
+                // 進行中セッションは {{conversation}} 側に含まれる。
+                // Contains only past (confirmed, saved) TalkScene sessions.
+                // The in-progress session is included in {{conversation}} instead.
                 ReplaceEntry.Tagged("chat_log", chatLog ?? "None", "conversation_history"),
 
                 // =====================================================================
-                // ユーザー発言 / User message
+                // 進行中の会話(CurrentConversation + 未送信のユーザー発言)
+                // Current conversation (CurrentConversation + not-yet-sent user message)
                 // =====================================================================
 
-                // Tagged block + note -> <user_turn note="...">
-                // note の文言は、テンプレート内に固定文として配置された
-                // <narration_format> ブロックの説明を前提とするため、
-                // ここでは重複を避け簡潔な記述に留める。
-                // The note text assumes the explanation already given by the
-                // fixed <narration_format> block placed in the template, so
-                // it is kept brief here to avoid duplication.
+                // Tagged block + note -> <conversation note="...">
+                // 進行中セッションのログと、今回のユーザー発言(末尾の1行)を統合したブロック。
+                // note は「末尾の行に応答せよ」という指示文であり、
+                // テンプレート冒頭の指示文と内容が重複するが、非力なモデル向けの
+                // 反復強化を意図した意図的な重複である。
+                // A block combining the in-progress session's log with the user's
+                // current turn (as the final line). The note is an instruction to
+                // "respond to the final line"; it intentionally duplicates the
+                // instruction given at the top of the template, as repeated
+                // reinforcement for less capable models.
                 ReplaceEntry.Tagged(
-                    "user_message",
-                    userMessage ?? "",
-                    "user_turn",
-                    "The user's current turn, written in the narration format described above."),
+                    "conversation",
+                    conversationText ?? "",
+                    "conversation",
+                    "Respond to the final line below, in character."),
 
                 // =====================================================================
                 // 利用可能なオプション(JSON 配列形式)/ Available options (JSON array format)

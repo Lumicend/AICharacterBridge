@@ -15,13 +15,8 @@ namespace AICharacterBridge.TalkSceneChat
     ///   {{char_name}}              Plain
     ///   {{char_description}}       Tagged block  -> description タグ
     ///   {{char_personality}}       Tagged block  -> personality タグ
-    ///   {{time_period}}            Plain
-    ///   {{week}}                   Plain
-    ///   {{location}}               Plain
-    ///   {{school_name}}            Plain
-    ///   {{context_note}}           Tagged block
-    ///   {{chat_log}}               Tagged block  -> conversation_history タグ
-    ///   {{user_message}}           Tagged block + note  -> user_turn タグ
+    ///   {{chat_log}}               Tagged block  -> conversation_history タグ(過去セッションのみ)
+    ///   {{conversation}}           Tagged block + note  -> conversation タグ(進行中セッション + 今回のユーザー発言)
     ///   {{available_expressions}}  Tagged block  -> available_expressions タグ
     ///   {{available_chara_motions}}Tagged block  -> available_poses タグ
     ///   {{available_impressions}}  Tagged block  -> available_impressions_on_user タグ
@@ -38,25 +33,48 @@ namespace AICharacterBridge.TalkSceneChat
     ///   which are misrendered in some display tools.
     ///   Instead, the enclosing name tag is written directly in the template.
     ///
+    /// 会話ブロックの構成について / About the conversation block structure:
+    ///   時間帯・場所などが同一のプレースホルダー({{time_period}} 等)として
+    ///   個別に存在していた旧構成を廃止し、{{chat_log}}(過去セッションのログ)と
+    ///   {{conversation}}(進行中セッションのログ + 今回のユーザー発言)の
+    ///   2ブロックに統合した。時間帯・場所・曜日・context_note(ooc_note)は、
+    ///   いずれも TalkSceneLogFormatter がこの2ブロックのヘッダー生成時に
+    ///   埋め込むため、個別のプレースホルダーとしては存在しない。
+    ///   {{conversation}} の末尾行が、まだAIに応答されていないユーザーの
+    ///   今回の発言(セリフまたは動作描写)であり、AIはこの行に応答する。
+    ///
+    ///   The previous structure, where time period, location, etc. each existed
+    ///   as separate placeholders (e.g. {{time_period}}), has been removed in
+    ///   favor of two blocks: {{chat_log}} (past-session logs) and
+    ///   {{conversation}} (the in-progress session's log plus the user's
+    ///   current turn). Time period, location, day of week, and context_note
+    ///   (ooc_note) are all embedded by TalkSceneLogFormatter when it builds
+    ///   the header for these two blocks, so they no longer exist as
+    ///   individual placeholders.
+    ///   The final line of {{conversation}} is the user's current turn
+    ///   (spoken words or narrated action) that has not yet been responded to;
+    ///   the AI is expected to respond to that line.
+    ///
     /// 記述フォーマット(統一記法)について / About the unified narration format:
     ///   {{chat_log}} の直前に配置された "narration_format" ブロックは、
     ///   プレースホルダーを含まない固定文であり、TalkScenePromptBuilder による
-    ///   置換の対象ではない。この固定文は、{{chat_log}}(過去ログ)と
-    ///   {{user_message}}(ユーザーの今回の発言)の両方に共通して適用される
-    ///   記法("..." / *...*)をAIに説明するためのものである。
+    ///   置換の対象ではない。この固定文は、{{chat_log}}(過去セッションのログ)と
+    ///   {{conversation}}(進行中セッションのログ + ユーザーの今回の発言)の
+    ///   両方に共通して適用される記法("..." / *...*)をAIに説明するためのものである。
     ///   ユーザー発言は UserMessageFormatter によって送信時点でこの記法へ
-    ///   正規化済みであり、過去のキャラクター発言も TalkSceneLog によって
-    ///   同じ記法で整形されるため、双方を読み解く際の共通ルールとして
-    ///   1箇所にまとめて記載している。
+    ///   正規化済みであり、キャラクター発言(過去・進行中を問わず)も
+    ///   TalkSceneLog.FormatEntry によって同じ記法で整形されるため、
+    ///   双方を読み解く際の共通ルールとして1箇所にまとめて記載している。
     ///
     ///   The "narration_format" block placed immediately before {{chat_log}}
     ///   is a fixed block of text containing no placeholders, and is not a
     ///   target of replacement by TalkScenePromptBuilder. It explains to the
     ///   AI the notation ("..."/*...*) that applies to both {{chat_log}}
-    ///   (past history) and {{user_message}} (the user's current turn).
-    ///   User utterances are normalized into this notation at send time by
-    ///   UserMessageFormatter, and past character utterances are formatted
-    ///   into the same notation by TalkSceneLog, so the shared rule for
+    ///   (past-session logs) and {{conversation}} (the in-progress session's
+    ///   log plus the user's current turn). User utterances are normalized
+    ///   into this notation at send time by UserMessageFormatter, and
+    ///   character utterances (past or in-progress) are formatted into the
+    ///   same notation by TalkSceneLog.FormatEntry, so the shared rule for
     ///   interpreting both is documented once, in a single place.
     /// </summary>
     public static class TalkSceneDefaultTemplate
@@ -70,7 +88,7 @@ namespace AICharacterBridge.TalkSceneChat
             return
 @"You are {{char_name}}, a fictional character in a game. You are NOT an AI assistant. Stay in character at all times. Never break character or acknowledge being an AI.
 
-Your task is to respond to the input enclosed in the ""user_turn"" tags below. Use the provided information to generate an authentic, in-character response.
+Your task is to respond to {{user_name}}'s most recent turn — the final line of the ""conversation"" block below. Use the provided information to generate an authentic, in-character response.
 
 {{world_setting}}
 
@@ -90,13 +108,7 @@ Your task is to respond to the input enclosed in the ""user_turn"" tags below. U
 {{char_personality}}
 </your_character>
 
-<current_context>
-<time>{{time_period}}, {{week}}</time>
-<location>{{location}} at {{school_name}}</location>
-{{context_note}}
-</current_context>
-
-<narration_format note=""Applies to both the conversation history below and the user's current turn."">
+<narration_format note=""Applies to the conversation_history and conversation blocks below."">
 Spoken words are written as plain text, or wrapped in ""double quotes"".
 Actions, scenery, and emotional descriptions are wrapped in *asterisks*.
 A single message may freely mix both, in any order. For example:
@@ -105,7 +117,7 @@ A single message may freely mix both, in any order. For example:
 
 {{chat_log}}
 
-{{user_message}}
+{{conversation}}
 
 <available_options>
 {{available_expressions}}
