@@ -24,6 +24,7 @@ AI Character Bridgeは、Unityベースのゲーム(特にIllusion社のコイ�
 - **ユーザー承認型アクション実行**: AIが提案した特殊アクションはユーザーの承認後に実行
 - **汎用プロンプト構築システム**: 順序制御・通常置換・タグ付き置換を統合した拡張性の高いテンプレート変数置換機能
 - **統一された会話記述フォーマット**: セリフ(`"..."`)と動作・情景・心情描写(`*...*`)を区別する共通の記法を採用し、ユーザー入力・会話ログ・プロンプト内の説明を一貫させる
+- **チャット風に統合された会話プロンプト構造**: 過去セッションのログ(`conversation_history`)と、進行中セッションのログ+今回のユーザー発言(`conversation`)を、時系列に沿った一連のデータ構造としてプロンプトに提示し、AIが「直近の行に応答する」という単純な規約で応答できるようにする
 - **最適化されたログフォーマット**: 低性能LLMでも理解しやすい形式で過去ログを提供
 - **モジュール独立セーブ機構**: 各モジュールが ExtensibleSaveFormat の独立したスロットに自己完結でデータを保存
 - **モジュール設計**: 機能を独立したモジュールとして管理し、追加・削除が容易
@@ -89,14 +90,14 @@ AICharacterBridge/
 │   ├── TalkSceneChatGameController.cs # モジュール専用セーブコントローラー
 │   ├── TalkSceneChatSaveData.cs      # モジュール専用セーブデータ
 │   ├── TalkSceneSessionManager.cs    # 会話セッション管理
-│   ├── TalkSceneLogFormatter.cs      # ログフォーマット処理
+│   ├── TalkSceneLogFormatter.cs      # 過去セッション/進行中セッションのログフォーマット処理
 │   ├── UserMessageFormatter.cs       # ユーザーメッセージの記述フォーマット正規化
 │   ├── TalkSceneActionFilter.cs      # 利用可能アクション判定
 │   ├── TalkSceneActionExecutor.cs    # 特殊アクション実行
 │   ├── TalkSceneEventExecutor.cs     # ADVイベント構築・実行
 │   ├── TalkScenePromptBuilder.cs     # プロンプト構築
 │   ├── Data/                          # TalkSceneChat専用データ
-│   │   ├── TalkSceneLog.cs
+│   │   ├── TalkSceneLog.cs           # 1回のTalkSceneの確定済み(過去)セッションログ
 │   │   ├── ConversationTurn.cs       # 会話ターン(1回の通信単位)
 │   │   ├── ConversationEntry.cs
 │   │   ├── ConversationEntryType.cs
@@ -165,9 +166,11 @@ TalkSceneSessionManager(セッション管理)
 └── ログ保存処理
 
 TalkSceneLogFormatter(ログフォーマット)
-├── 過去ログと現在セッションログの統合
-├── UIとプロンプトビルダー両方で使用
-└── 静的メソッドによる単一責任
+├── 過去セッションのログをフォーマット(FormatPastLogs)
+├── 進行中セッションのログ + 今回のユーザー発言を統合フォーマット(FormatCurrentConversation)
+│   └── 時間帯・場所・曜日ヘッダーの生成、context_note(ooc_note)の取得・埋め込みもここで行う
+├── 上記2つを統合したUI表示用フォーマット(FormatLogs)
+└── UIとプロンプトビルダー両方で使用
 
 TalkSceneUI(表示層・ImguiWindow)
 ├── UI描画のみ
@@ -178,8 +181,8 @@ TalkSceneUI(表示層・ImguiWindow)
 TalkScenePromptBuilder(プロンプト構築)
 ├── CharacterCardResolver でプレースホルダー解決済みのカードを取得
 ├── WorldSetting取得(コアセーブデータから)
-├── TalkSceneLogFormatterを使用したログフォーマット
-├── context_note 取得(TalkSceneChatGameController.CurrentSaveData から)
+├── TalkSceneLogFormatter.FormatPastLogs による過去セッションログの取得
+├── TalkSceneLogFormatter.FormatCurrentConversation による進行中セッション+今回の発言の取得
 ├── 利用可能アクションのフィルタリング
 └── ReplaceEntry リストの構築と PromptReplacer.ReplaceAll による一括置換
     ├── Plain: テンプレート内でインラインで使用される場合(囲みタグが直書きされている場合を含む)
@@ -247,8 +250,12 @@ TalkSceneEventExecutor(イベント実行)
 - ログの自動保存(コアセーブデータへ)
 
 **TalkSceneLogFormatter.cs**
-- 過去ログと現在セッションログの統合フォーマット
-- UIとプロンプトビルダー両方で共通使用
+- 過去セッションのログをフォーマットする `FormatPastLogs()`(ログが無い場合は `"None"`)
+- 進行中セッションのログと、まだ確定していない今回のユーザー発言を統合フォーマットする `FormatCurrentConversation()`
+  - ヘッダー(時間帯・場所・曜日)は常に `GameStateProvider` から現在のゲーム状態を取得して生成する
+  - `context_note` は `TalkSceneChatGameController.CurrentSaveData` から取得し、設定されていれば `<ooc_note>` として埋め込む(空なら省略)
+  - 未確定のユーザー発言を渡すと、一時的な `ChatEntry` として整形し末尾行に追加する(保存はしない)
+- 上記2つを `"--- Now ---"` で結合したUI表示用の `FormatLogs()`(`TalkSceneUI` の Log タブから使用。プロンプト構築では `FormatPastLogs` / `FormatCurrentConversation` を個別に呼び出す)
 - 静的メソッドによる単一責任の実現
 
 **UserMessageFormatter.cs**
@@ -745,7 +752,7 @@ public class HeroineChatSettings
     public int HeroineIndex { get; set; }
 
     [JsonProperty("context_note")]
-    public string ContextNote { get; set; }  // {{context_note}} プレースホルダーに展開
+    public string ContextNote { get; set; }  // プロンプトの <ooc_note> ブロックに展開される
     
     public bool IsEmpty();
 }
@@ -760,7 +767,7 @@ public class HeroineChatSettings
 | `"..."`(二重引用符、または無印) | セリフ |
 | `*...*`(アスタリスク) | 動作・情景・心情描写 |
 
-1つのメッセージ内でセリフと動作描写を自由に混在させることができます(例: `*手を挙げる* "こんにちは！" *元気よく手を振る*`)。この記法はユーザー入力・過去の会話ログの双方に共通して適用され、プロンプトテンプレート内の `<narration_format>` ブロック(`TalkSceneDefaultTemplate.cs`)を通じてAIに説明されます。
+1つのメッセージ内でセリフと動作描写を自由に混在させることができます(例: `*手を挙げる* "こんにちは！" *元気よく手を振る*`)。この記法はユーザー入力・過去セッションのログ(`{{chat_log}}`)・進行中セッションのログ(`{{conversation}}`)のすべてに共通して適用され、プロンプトテンプレート内の `<narration_format>` ブロック(`TalkSceneDefaultTemplate.cs`)を通じてAIに説明されます。
 
 なお、AIからの応答自体は `DialogueSegment` の `type`(`"dialogue"` / `"observation"`)によって既にセリフと描写が区別されているため、JSON出力の `content` フィールド内にこの記法を重ねて含める必要はありません(`response_rules` で明示的に禁止しています)。ログとして保存・表示する際に、プラグイン側が `type` に応じて機械的に `"..."` / `*...*` を付与します。
 
@@ -787,12 +794,25 @@ public static class UserMessageFormatter
 
 #### TalkSceneLogFormatter
 
-TalkSceneログのフォーマットを担当する静的クラス。UIとプロンプトビルダーの両方で使用。
+TalkSceneログのフォーマットを担当する静的クラス。UIとプロンプトビルダーの両方で使用。過去セッション(確定済みログ)のフォーマットと、進行中セッション(CurrentConversation)のフォーマットを分離して提供します。
+
 ```csharp
 public static class TalkSceneLogFormatter
 {
-    // 過去ログと現在セッションログを統合してフォーマット
-    // sessionManager は省略可能(過去ログのみ表示も可能)
+    // 過去セッションのみをフォーマット。ログが存在しない場合は "None"
+    public static string FormatPastLogs(SaveData.Heroine heroine);
+
+    // 進行中セッションのログ + 今回のユーザー発言(未確定、省略可能)を統合フォーマット
+    // ヘッダー(時間帯・場所・曜日)は常に現在のゲーム状態を反映し、
+    // context_note が設定されていれば <ooc_note> として埋め込む
+    public static string FormatCurrentConversation(
+        SaveData.Heroine heroine,
+        TalkSceneSessionManager sessionManager,
+        string pendingUserMessage = null,
+        string userName = null);
+
+    // 上記2つを "--- Now ---" で結合したUI表示用フォーマット
+    // (TalkSceneUI の Log タブから使用。プロンプト構築では使用しない)
     public static string FormatLogs(
         SaveData.Heroine heroine,
         TalkSceneSessionManager sessionManager = null);
@@ -887,7 +907,8 @@ public class ConversationTurn
 
 #### TalkSceneLog
 
-1回のTalkSceneでのやり取り全体を記録。
+1回のTalkSceneでの確定済み(過去セッション)のやり取り全体を記録するクラス。過去セッションのプロンプト用フォーマット(`FormatForPrompt`)のみを担当し、進行中セッション(CurrentConversation)のフォーマットは `TalkSceneLogFormatter` が担当します。
+
 ```csharp
 public class TalkSceneLog : MainGameLog
 {
@@ -905,29 +926,17 @@ public class TalkSceneLog : MainGameLog
     
     public void AddTurn(ConversationTurn turn);
     public int TurnCount { get; }
+    public List<ConversationEntry> GetAllEntries();
     public override string FormatForPrompt(MainGameLogCollection collection, int index);
-    public string FormatAsCurrentConversation();
+
+    // 1エントリーを1行のテキストに変換する共通処理。
+    // 過去セッション用フォーマット(FormatForPrompt)と、
+    // TalkSceneLogFormatter.FormatCurrentConversation の両方から使用される。
+    internal static string FormatEntry(ConversationEntry entry);
 }
 ```
 
-内部の(private な)エントリー整形処理は、前述の「会話記述フォーマット」の規則に従って各エントリーを整形します。ユーザー発言は `UserMessageFormatter` によって既に正規化済みのためそのまま出力し、キャラクターのセリフ(`dialogue`)は `"..."` で、描写(`observation`)は `*...*` でそれぞれ囲みます。
-
-**データ構造:**
-```
-TalkSceneLog
-└── ConversationTurns: List<ConversationTurn>
-    ├── ConversationTurn #1(1回目の通信)
-    │   └── Entries: List<ConversationEntry>
-    │       ├── ChatEntry (user message)
-    │       ├── ChatEntry (character dialogue)
-    │       └── ChatEntry (character observation)
-    ├── ConversationTurn #2(2回目の通信)
-    │   └── Entries: List<ConversationEntry>
-    │       ├── ChatEntry (user message)
-    │       ├── ActionEntry
-    │       └── ...
-    └── ...
-```
+`FormatEntry()` は、前述の「会話記述フォーマット」の規則に従って各エントリーを整形します。ユーザー発言は `UserMessageFormatter` によって既に正規化済みのためそのまま出力し、キャラクターのセリフ(`dialogue`)は `"..."` で、描写(`observation`)は `*...*` でそれぞれ囲みます。`Content` に改行が含まれる場合は半角スペースへ変換されます(「1エントリー1行」という前提を保つため)。
 
 ### TalkSceneChat/Response
 
@@ -1335,15 +1344,16 @@ Enable Arousal Update = true
 14. **自動ライフサイクル管理**: セッションをTalkSceneと完全連動させ、手動管理を排除
 15. **Single Source of Truth**: データの真実の源泉を一箇所に集約
 16. **構造化された会話管理**: ターン単位でデータを管理し、会話の流れを明確化
-17. **ロジックの集約**: TalkSceneLogFormatterによるログフォーマットロジックの一元化
+17. **ロジックの集約**: TalkSceneLogFormatterによるログフォーマットロジックの一元化(過去セッションと進行中セッションの双方について、時間帯・場所等のヘッダー生成とcontext_noteの埋め込みを一箇所に集約している)
 18. **非破壊的プレースホルダー解決**: CharacterCardResolverはクローン上で置換を行い、元データを保護
 19. **順序制御を保証した置換**: ReplaceEntryリストのインデックス順で置換が実行されることを保証
 20. **モジュール自己完結セーブ**: 各モジュールは専用の GameCustomFunctionController を持ち、コアセーブデータに依存しない
 21. **テンプレートとBuilderの責務分離**: プロンプトテンプレートはプレースホルダーのみを記述し、タグ構造はBuilder側で付与する。テンプレートの記述をスッキリ保ちつつ、タグの変更をコード側で一元管理できる
 22. **統一された会話記述フォーマット**: セリフ(`"..."`)と動作・情景・心情描写(`*...*`)を区別する共通の記法を、ユーザー入力・会話ログ・プロンプト内の説明で一貫させる。ユーザー入力側の正規化(記法への変換・エスケープ処理)は `UserMessageFormatter` が一元的に担い、判定に迷う入力に対しては元のテキストを保持するフォールバック方針を徹底する
+23. **チャット風の会話プロンプト構造**: プロンプト内の会話情報は、過去セッションのログ(`conversation_history`)と、進行中セッション+今回のユーザー発言を統合した`conversation`の2ブロックで構成する。`conversation`ブロックの末尾行は常に「まだAIが応答していない、ユーザーの最新のターン」であり、AIはこの位置的な規約(および冒頭の指示文・`conversation`タグのnote属性による反復強化)に基づいて応答対象を認識する。時間帯・場所・曜日・OOC情報(context_note)は、会話ログとは独立した「作中外の情報」として`<ooc_note>`タグで明確に区別する
 
 ---
 
-**ドキュメントバージョン**: 36.0  
+**ドキュメントバージョン**: 37.0  
 **対応プラグインバージョン**: AI Character Bridge v0.0.2  
 **最終更新**: 2026年9月
